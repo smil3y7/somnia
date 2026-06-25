@@ -11,7 +11,7 @@ window.LANG_SL = {
     'btn.json':         'JSON',
     'btn.delete':       'Izbriši',
     'btn.edit':         'Uredi',
-    'btn.newRow':       '+ Nova vrstica',
+    'btn.newRow':       'Nova vrstica',
     'btn.run':          'Zaženi',
         'btn.help':   '📖 Pomoč',
     'btn.print':        '🖨 Natisni',

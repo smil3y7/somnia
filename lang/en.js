@@ -10,7 +10,7 @@ window.LANG_EN = {
     'btn.json':         'JSON',
     'btn.delete':       'Delete',
     'btn.edit':         'Edit',
-    'btn.newRow':       '+ New row',
+    'btn.newRow':       'New row',
     'btn.run':          'Run',
         'btn.help':   '📖 Help',
     'btn.print':        '🖨 Print',
