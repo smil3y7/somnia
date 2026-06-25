@@ -522,7 +522,7 @@
           </button>
           <div class="spacer"></div>
           <span class="row-count" id="sql-count"></span>
-          <button class="btn" id="btn-sql-help" onclick="sqlShowHelp()"><span id="lbl-sql-help">📖 Pomoč</span></button>
+          <button class="btn" id="btn-sql-help" onclick="sqlShowHelp()"><span id="lbl-sql-help">Pomoč</span></button>
         </div>
       </div>
 
@@ -1484,7 +1484,7 @@ function jumpToActivity(activityId){
       const ci=groupIdx-(tvState.activities.page-1)*TV_CONFIG.activities.RPP;
       if(cards[ci]){cards[ci].classList.add('open');cards[ci].scrollIntoView({behavior:'smooth',block:'start'});}
     },50);
-    toast('Aktivnost #'+activityId,'ok');
+    toast(t('toast.actAdded')+' #'+activityId,'ok');
   },100);
 }
 
@@ -1735,7 +1735,7 @@ function saveRow(){
         const el=document.getElementById('mf_'+ciInInfo);
         return el?(el.value.trim()===''?null:el.value.trim()):null;
       });
-      if(!nonPK.length){toast('Tabela nima polj za vnos','err');return;}
+      if(!nonPK.length){toast(t('toast.noTableFields'),'err');return;}
       const sql=`INSERT INTO "${currentTable}" (${nonPK.map(c=>`"${c.name}"`).join(',')}) VALUES (${nonPK.map(()=>'?').join(',')})`;
       console.log('INSERT:',sql,vals);
       safeRun(sql,vals);
@@ -1745,7 +1745,7 @@ function saveRow(){
       const updates=[],vals=[];
       tbCols.forEach((col,ci)=>{if(tbInfo.find(t=>t.name===col)?.pk>0)return;const el=document.getElementById('mf_'+ci);if(el){updates.push(`"${col}" = ?`);vals.push(el.value.trim()===''?null:el.value.trim());}});
       pkCols.forEach(pk=>vals.push(row[tbCols.indexOf(pk.name)]));
-      if(!updates.length){toast('Ni polj za posodobitev','err');return;}
+      if(!updates.length){toast(t('toast.noFields'),'err');return;}
       const sql=`UPDATE "${currentTable}" SET ${updates.join(', ')} WHERE ${pkCols.map(pk=>`"${pk.name}" = ?`).join(' AND ')}`;
       console.log('UPDATE:',sql,vals);
       safeRun(sql,vals);
@@ -2032,7 +2032,7 @@ function nfAddCycle(){
     nfLookup.supplements.map(r=>({label:(r[3]?r[3]+' / ':'')+r[1], value:r[0], suppId:r[0]})),
     it=>{
       const list=document.getElementById(`nf-c${ci}-supps`);
-      if(list.querySelector(`[data-suppid="${it.value}"]`)){toast('Suplement je že dodan','err');return;}
+      if(list.querySelector(`[data-suppid="${it.value}"]`)){toast(t('toast.suplAdded'),'err');return;}
       const dose=document.getElementById(`nf-c${ci}-supp-dose`).value.trim()||null;
       const row=document.createElement('div');
       row.className='nf-supp-row'; row.dataset.suppid=it.value;
@@ -2132,7 +2132,7 @@ function nfBuildCombo(container, items, onSelect, placeholder){
 // Make a pill with data-id (for cats/techs)
 function nfMakePillById(container, id, name){
   if([...container.querySelectorAll('.nf-supp-row')].some(r=>r.dataset.id==id)){
-    toast('Že dodano','err');return;
+    toast(t('toast.alreadyAdded'),'err');return;
   }
   const row=document.createElement('div');
   row.className='nf-supp-row';
@@ -2147,7 +2147,7 @@ function nfMakePillById(container, id, name){
 function nfAddNewLoc(){
   const nameEl=document.getElementById('nf-loc-new');
   const name=nameEl.value.trim();
-  if(!name){toast('Vnesi ime lokacije','err');return;}
+  if(!name){toast(t('toast.enterLoc'),'err');return;}
   safeRun('INSERT INTO Location (Location,Act) VALUES (?,1)',[name]);
   const locId=rows('SELECT last_insert_rowid()')[0][0];
   nfLookup.locations=rows(`SELECT LocationId,Location FROM Location WHERE ${nfActFilter()} ORDER BY Location`);
@@ -2174,7 +2174,7 @@ function nfAddNewLoc(){
 // Shared: make a removable pill for signs/percs lists
 function nfMakePill(container, name, desc){
   if([...container.querySelectorAll('.nf-supp-row')].some(r=>r.dataset.name===name)){
-    toast('Že dodano','err');return;
+    toast(t('toast.alreadyAdded'),'err');return;
   }
   const row=document.createElement('div');
   row.className='nf-supp-row';
@@ -2191,7 +2191,7 @@ function nfAddNewSign(ci){
   const nameEl=document.getElementById(`nf-c${ci}-sign-name`);
   const descEl=document.getElementById(`nf-c${ci}-sign-desc`);
   const name=nameEl.value.trim();
-  if(!name){toast('Vnesi ime dream signa','err');return;}
+  if(!name){toast(t('toast.enterSign'),'err');return;}
   nfMakePill(document.getElementById(`nf-c${ci}-signs-list`),name,descEl.value.trim());
   nameEl.value='';descEl.value='';
 }
@@ -2202,7 +2202,7 @@ function nfAddNewPerc(ci){
   const nameEl=document.getElementById(`nf-c${ci}-perc-name`);
   const descEl=document.getElementById(`nf-c${ci}-perc-desc`);
   const name=nameEl.value.trim();
-  if(!name){toast('Vnesi ime perception bubble','err');return;}
+  if(!name){toast(t('toast.enterPerc'),'err');return;}
   nfMakePill(document.getElementById(`nf-c${ci}-percs-list`),name,descEl.value.trim());
   nameEl.value='';descEl.value='';
 }
@@ -2211,7 +2211,7 @@ function nfAddNewCat(ci){
   const nameEl=document.getElementById(`nf-c${ci}-cat-new-name`);
   const descEl=document.getElementById(`nf-c${ci}-cat-new-desc`);
   const name=nameEl.value.trim();
-  if(!name){toast('Vnesi ime kategorije','err');return;}
+  if(!name){toast(t('toast.enterCat'),'err');return;}
   safeRun('INSERT INTO DreamCategories (DisplayName,Description,Act) VALUES (?,?,1)',[name,descEl.value.trim()||null]);
   const catId=rows('SELECT last_insert_rowid()')[0][0];
   nfLookup.categories=rows(`SELECT CategoryID,DisplayName FROM DreamCategories WHERE ${nfActFilter()} ORDER BY DisplayName`);
@@ -2229,7 +2229,7 @@ function nfAddNewTech(ci){
   const displayEl=document.getElementById(`nf-c${ci}-tech-new-display`);
   const fullEl=document.getElementById(`nf-c${ci}-tech-new-full`);
   const display=displayEl.value.trim();
-  if(!display){toast('Vnesi kratko ime tehnike','err');return;}
+  if(!display){toast(t('toast.enterTech'),'err');return;}
   safeRun('INSERT INTO Techniques (DisplayName,FullName,Act) VALUES (?,?,1)',[display,fullEl.value.trim()||null]);
   const techId=rows('SELECT last_insert_rowid()')[0][0];
   nfLookup.techniques=rows(`SELECT TechniquesID,DisplayName,FullName FROM Techniques WHERE ${nfActFilter()} ORDER BY DisplayName`);
@@ -2247,7 +2247,7 @@ function nfAddNewSupp(ci){
   const unitEl=document.getElementById(`nf-c${ci}-supp-new-unit`);
   const typeEl=document.getElementById(`nf-c${ci}-supp-new-type`);
   const name=nameEl.value.trim();
-  if(!name){toast('Vnesi ime suplementa','err');return;}
+  if(!name){toast(t('toast.enterSupp'),'err');return;}
   safeRun('INSERT INTO Supplements (SupplementDescription,SupplementsUnit,SupplementTypeID,Act) VALUES (?,?,?,1)',
     [name, unitEl.value.trim()||null, typeEl.value||null]);
   const suppId=rows('SELECT last_insert_rowid()')[0][0];
@@ -2292,7 +2292,7 @@ function nfSaveExec(){
   try{
     const date=document.getElementById('nf-date').value.trim();
     const title=document.getElementById('nf-title').value.trim();
-    if(!title){toast('Naslov je obvezen','err');return;}
+    if(!title){toast(t('toast.titleRequired'),'err');return;}
 
     // ---- Location (from pill list) ----
     let locId=null;
@@ -2303,11 +2303,11 @@ function nfSaveExec(){
     db.run('INSERT INTO Dreams (Date_,DreamTitle,Location) VALUES (?,?,?)',[date||null,title,locId]);
     markUnsaved();
     const dreamId=rows('SELECT last_insert_rowid()')[0][0];
-    if(!dreamId){toast('Napaka: DreamID ni bil ustvarjen','err');return;}
+    if(!dreamId){toast(t('toast.dreamIdErr'),'err');return;}
 
     // ---- Collect active cycles ----
     const cycleEls=document.querySelectorAll('#nf-cycles .nf-cycle');
-    if(!cycleEls.length){toast('Dodaj vsaj en sleep cikel','err');return;}
+    if(!cycleEls.length){toast(t('toast.addCycle'),'err');return;}
 
     cycleEls.forEach(cyc=>{
       const ci=cyc.id.replace('nf-cycle-','');
@@ -2974,12 +2974,12 @@ function submitPinRecovery(){
   document.getElementById('pin-forgot-overlay').style.display='none';
   document.getElementById('pin-screen')?.remove();
   updateLockBtn();
-  toast('PIN ponastavljen. Nastavi novega v setup.html','ok');
+  toast(t('toast.pinReset'),'ok');
 }
 
 function lockBrowser(){
   const stored=localStorage.getItem(_PIN_KEY);
-  if(!stored){toast('PIN ni nastavljen. Nastavi ga v setup.html','err');return;}
+  if(!stored){toast(t('toast.pinNotSet'),'err');return;}
   // Prikaži PIN ekran
   pinCheck();
 }
