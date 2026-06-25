@@ -1,0 +1,3387 @@
+<!-- Somnia — Dream Journal Browser
+     v4.0 — 2026-04-11
+     Changelog: see CHANGELOG.md
+-->
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Somnia</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#7c6af7">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='72'>🌙</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#0e0f11; --bg2:#16181c; --bg3:#1e2026;
+    --border:#2a2d35; --border2:#353840;
+    --text:#e2e4ea; --muted:#7a7f8e;
+    --accent:#7c6af7; --accent2:#a599ff;
+    --green:#4ade80; --amber:#fbbf24; --red:#f87171;
+    --radius:8px; --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  /* Header */
+  header{display:flex;align-items:center;gap:14px;padding:11px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+  .logo{font-family:var(--mono);font-size:15px;color:var(--accent2);letter-spacing:-.5px}
+  .logo span{color:var(--muted)}
+  .db-badge{font-family:var(--mono);font-size:11px;color:var(--green);padding:3px 10px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:20px;display:none}
+  .file-btn{display:flex;align-items:center;gap:7px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:opacity .15s}
+  .file-btn:hover{opacity:.85}
+  .unsaved-dot{display:inline-block;width:7px;height:7px;background:var(--amber);border-radius:50%;margin-left:5px;vertical-align:middle;animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  #fi{visibility:hidden;position:absolute;width:0;height:0}
+  :focus:not(:focus-visible){outline:none}
+  .nav-tab:focus,.btn:focus,.pg-btn:focus,.abt:focus,.card-chevron:focus,.export-btn-sm:focus,.file-btn:focus,.link-btn:focus{outline:none}
+  /* Nav */
+  .nav-tabs{display:flex;gap:2px;padding:8px 16px 0;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+  .nav-tab{padding:7px 14px;cursor:pointer;font-size:13px;color:var(--muted);border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;transition:color .15s,background .15s;margin-bottom:-1px;white-space:nowrap}
+  .nav-tab:hover{color:var(--text)}
+  .global-search-wrap{position:relative}
+  .global-search-input{width:220px;padding:6px 28px 6px 32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s,width .2s}
+  .global-search-input:focus{border-color:var(--accent);width:300px}
+  .global-search-input::placeholder{color:var(--muted)}
+  .global-search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+  .global-results{display:none;position:absolute;top:calc(100% + 6px);right:0;width:460px;max-height:480px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:10px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+  .global-results.open{display:block}
+  .gr-section{padding:8px 0}
+  .gr-header{padding:4px 14px;font-size:10px;font-weight:500;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+  .gr-item{display:flex;align-items:flex-start;gap:10px;padding:8px 14px;cursor:pointer;transition:background .1s}
+  .gr-item:hover{background:var(--bg3)}
+  .gr-item-title{font-size:13px;color:var(--text);flex:1}
+  .gr-item-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .gr-item-badge{font-family:var(--mono);font-size:10px;color:var(--accent2);white-space:nowrap;padding-top:2px}
+  .gr-empty{padding:20px 14px;text-align:center;color:var(--muted);font-size:13px}
+  .gr-show-more{padding:6px 14px;font-size:12px;color:var(--accent2);cursor:pointer;user-select:none}
+  .gr-show-more:hover{color:var(--accent)}
+  .gr-divider{height:1px;background:var(--border);margin:0 14px}
+  .nav-tab.active{color:var(--text);background:var(--bg);border-color:var(--border);font-weight:500}
+  .tab-count{font-size:10px;font-family:var(--mono);background:var(--bg3);color:var(--muted);padding:1px 5px;border-radius:8px;margin-left:4px}
+  .nav-tab.active .tab-count{background:rgba(124,106,247,.15);color:var(--accent2)}
+  /* Layout */
+  .main{display:flex;flex:1;overflow:hidden}
+  .sidebar{width:210px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+  .sidebar-section{padding:10px 12px 4px;font-size:10px;font-weight:500;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+  .table-item{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;cursor:pointer;transition:background .12s;border-left:2px solid transparent}
+  .table-item:hover{background:var(--bg3)}
+  .table-item.active{background:rgba(124,106,247,.1);border-left-color:var(--accent)}
+  .table-item .tname{font-size:13px}
+  .table-item .tcount{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  /* Toolbar */
+  .toolbar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+  .search-wrap{position:relative}
+  .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+  .search-input{width:260px;padding:7px 28px 7px 34px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s}
+  .search-input:focus{border-color:var(--accent)}
+  .search-input::placeholder{color:var(--muted)}
+  .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:3px;display:none}
+  .search-clear:hover{color:var(--text)}
+  .search-clear.visible{display:block}
+  select{padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;cursor:pointer}
+  select:focus{border-color:var(--accent)}
+  .btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-size:13px;transition:border-color .15s,background .15s;white-space:nowrap}
+  .btn:hover{border-color:var(--border2);background:var(--bg2)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{opacity:.9}
+  .btn.active-toggle{background:var(--accent);border-color:var(--accent);color:#fff}
+  .lang-toggle{display:flex;gap:0}
+  .lang-btn{padding:4px 9px;font-size:11px;font-family:var(--mono);font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+  .lang-btn:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+  .lang-btn:last-child{border-radius:0 var(--radius) var(--radius) 0;border-left:none}
+  .lang-btn:not(:first-child):not(:last-child){border-left:none}
+  .lang-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .lang-btn:not(.active):hover{color:var(--text);background:var(--bg3)}
+  .db-mode-btn{padding:5px 12px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font);transition:all .15s}
+  .db-mode-btn:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+  .db-mode-btn:last-child{border-radius:0 var(--radius) var(--radius) 0;border-left:none}
+  .db-mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .sql-saved-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+  .sql-saved-item:hover{background:var(--bg3)}
+  .sql-saved-item:last-child{border-bottom:none}
+  .sql-saved-name{font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+  .sql-saved-preview{font-family:var(--mono);font-size:11px;color:var(--muted);flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sql-saved-del{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px}
+  .sql-saved-del:hover{color:var(--red)}
+  .spacer{flex:1}
+  .row-count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  /* Raw table */
+  .table-wrap{flex:1;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{position:sticky;top:0;background:var(--bg2);padding:8px 12px;text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;user-select:none;cursor:pointer}
+  thead th:hover{color:var(--text)}
+  thead th.sorted{color:var(--accent2)}
+  thead th .si{display:inline-block;margin-left:4px;font-size:10px;opacity:.4}
+  thead th.sorted .si{opacity:1}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+  tbody tr:hover{background:var(--bg3)}
+  tbody td{padding:7px 12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td.null{color:var(--muted);font-style:italic;font-family:var(--mono);font-size:11px}
+  td.bt{color:var(--green);font-family:var(--mono);font-size:12px}
+  td.bf{color:var(--muted);font-family:var(--mono);font-size:12px}
+  td.pk{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+  td.act-col{white-space:nowrap}
+  .abt{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-family:var(--font);transition:all .12s}
+  .abt:hover{color:var(--text);border-color:var(--border2)}
+  .abt.del:hover{color:var(--red);border-color:var(--red)}
+  /* Cards (shared) */
+  .card-view{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;transition:border-color .15s}
+  .card:hover{border-color:var(--border2)}
+  .card-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer}
+  .card.open .card-chevron{transform:rotate(90deg)}
+  .card-body{display:none;border-top:1px solid var(--border)}
+  .card-export-bar{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .card-export-bar span{font-size:11px;color:var(--muted);margin-right:2px}
+  .export-btn-sm{padding:3px 9px;font-size:11px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:5px;cursor:pointer;font-family:var(--font);transition:all .12s;display:flex;align-items:center;gap:4px}
+  .export-btn-sm:hover{color:var(--text);border-color:var(--border2);background:var(--bg2)}
+  .card.open .card-body{display:block}
+  .card-chevron{color:var(--muted);font-size:12px;transition:transform .2s;flex-shrink:0}
+  .card-date{font-family:var(--mono);font-size:11px;color:var(--accent2);min-width:90px}
+  .card-title{font-size:14px;font-weight:500;flex:1}
+  .card-badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(124,106,247,.15);color:var(--accent2);border:1px solid rgba(124,106,247,.2);white-space:nowrap}
+  .card-badge-blue{background:rgba(129,194,255,.12);color:#81c2ff;border-color:rgba(129,194,255,.2)}
+  .card-badge-amber{background:rgba(251,191,36,.1);color:var(--amber);border-color:rgba(251,191,36,.2)}
+  .card-loc{font-size:12px;color:var(--muted)}
+  .card-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+  .card-item:last-child{border-bottom:none}
+  .card-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card-item-title{font-size:13px;font-weight:500}
+  .card-item-desc{font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .type-badge{font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(74,222,128,.08);color:var(--green);border:1px solid rgba(74,222,128,.2);font-family:var(--mono);white-space:nowrap}
+  .type-badge-amber{background:rgba(251,191,36,.08);color:var(--amber);border-color:rgba(251,191,36,.2)}
+  .no-items{padding:16px;color:var(--muted);font-size:13px;font-style:italic}
+  .empty-view{display:flex;align-items:center;justify-content:center;flex:1;color:var(--muted);font-size:13px}
+  /* Sub-cards (items inside grouped cards) */
+  .sub-card{border-bottom:1px solid var(--border);transition:background .1s}
+  .sub-card:last-child{border-bottom:none}
+  .sub-card:hover{background:rgba(255,255,255,.02)}
+  .sub-card-header{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;flex-wrap:wrap}
+  .sub-card-body{display:none;padding:10px 16px 12px;border-top:1px solid var(--border)}
+  .sub-card.open .sub-card-body{display:block}
+  .sub-card-title{font-size:13px;font-weight:500;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sub-card-chevron{color:var(--muted);font-size:10px;transition:transform .2s;flex-shrink:0}
+  .sub-card.open .sub-card-chevron{transform:rotate(90deg)}
+  /* Dream-specific */
+  .cycle-id{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .cycle-time{font-family:var(--mono);font-size:11px;color:var(--amber)}
+  .cycle-bm{font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.2)}
+  .cycle-contents{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px;white-space:pre-wrap;word-break:break-word}
+  .cycle-comments{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px;white-space:pre-wrap;word-break:break-word}
+  .cycle-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  /* Tags */
+  .tag{font-size:11px;padding:2px 8px;border-radius:12px;border:1px solid var(--border2);color:var(--muted);white-space:nowrap}
+  .highlight{background:rgba(251,191,36,.35);color:var(--text);border-radius:2px;padding:0 1px}
+  .tag.cat-zavest    {border-color:rgba(165,153,255,.35);color:#c4baff;background:rgba(165,153,255,.1)}
+  .tag.cat-entitete  {border-color:rgba(96,165,250,.35);color:#93c5fd;background:rgba(96,165,250,.1)}
+  .tag.cat-sposobnosti{border-color:rgba(74,222,128,.35);color:#86efac;background:rgba(74,222,128,.1)}
+  .tag.cat-zaznava   {border-color:rgba(251,191,36,.35);color:#fde68a;background:rgba(251,191,36,.1)}
+  .tag.cat-prostor   {border-color:rgba(251,146,60,.35);color:#fdba74;background:rgba(251,146,60,.1)}
+  .tag.cat-notranje  {border-color:rgba(244,114,182,.35);color:#f9a8d4;background:rgba(244,114,182,.1)}
+  .tag.cat-sexual    {border-color:rgba(248,113,113,.35);color:#fca5a5;background:rgba(248,113,113,.1)}
+  .tag.cat-other     {border-color:rgba(148,163,184,.25);color:#94a3b8;background:rgba(148,163,184,.07)}
+  .tag.tech {border-color:rgba(165,153,255,.25);color:var(--accent2);background:rgba(165,153,255,.06)}
+  .tag.supp {border-color:rgba(251,191,36,.25);color:var(--amber);background:rgba(251,191,36,.06)}
+  .tag.sign {border-color:rgba(248,113,113,.25);color:var(--red);background:rgba(248,113,113,.06)}
+  .tag.perc {border-color:rgba(124,106,247,.25);color:var(--accent);background:rgba(124,106,247,.06)}
+  .tag.act  {border-color:rgba(129,194,255,.25);color:#81c2ff;background:rgba(129,194,255,.06)}
+  .link-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;opacity:.5;transition:opacity .15s;line-height:1}
+  .link-btn:hover{opacity:1;background:var(--bg3)}
+  /* Stats */
+  .stats-view{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px}
+  .stat-val{font-family:var(--mono);font-size:28px;font-weight:500;color:var(--accent2);line-height:1}
+  .stat-lbl{font-size:12px;color:var(--muted)}
+  .stats-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .stats-section h3{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .bar-label{font-size:12px;color:var(--text);min-width:130px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-track{flex:1;background:var(--bg3);border-radius:3px;height:8px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+  .bar-count{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:30px;text-align:right}
+  .stats-two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:700px){.stats-two-col{grid-template-columns:1fr}}
+  /* Pagination */
+  .pagination{display:flex;align-items:center;gap:5px;padding:9px 14px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+  .pg-btn{padding:5px 10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--mono)}
+  .pg-btn:hover:not(:disabled){border-color:var(--accent)}
+  .pg-btn:disabled{opacity:.35;cursor:default}
+  .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pg-info{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+  /* Empty */
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--muted);padding:60px 20px;text-align:center}
+  .empty h3{font-size:16px;font-weight:400;color:var(--text)}
+  .empty p{font-size:13px;max-width:320px;line-height:1.6}
+  /* Modal */
+  .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center}
+  .confirm-overlay.open{display:flex}
+  .confirm-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px 28px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.4)}
+  .confirm-box h4{margin-bottom:10px;font-size:15px;font-weight:500}
+  .confirm-box p{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6}
+  .confirm-box .btns{display:flex;gap:8px;justify-content:flex-end}
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:520px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column}
+  .modal-head{display:flex;align-items:center;padding:15px 20px;border-bottom:1px solid var(--border);gap:10px}
+  .modal-title{font-size:15px;font-weight:500;flex:1}
+  .modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;border-radius:4px}
+  .modal-close:hover{color:var(--text);background:var(--bg3)}
+  .modal-body{padding:18px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:11px}
+  .fg{display:flex;flex-direction:column;gap:4px}
+  .fl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .fi{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;resize:vertical}
+  .fi:focus{border-color:var(--accent)}
+  .modal-foot{padding:13px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+  /* Toast */
+  .toast{position:fixed;bottom:20px;right:20px;padding:9px 15px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;z-index:200;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none}
+  .toast.show{opacity:1;transform:none}
+  .toast.ok{border-color:rgba(74,222,128,.3);color:var(--green)}
+  .toast.err{border-color:rgba(248,113,113,.3);color:var(--red)}
+
+  /* ---- New Dream Form ---- */
+  .nf-add-section{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border2)}
+  .nf-add-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  /* Combobox picker */
+  .nf-combo{position:relative;width:100%}
+  .nf-combo-input{width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s;cursor:text}
+  .nf-combo-input:focus{border-color:var(--accent)}
+  .nf-combo-input::placeholder{color:var(--muted)}
+  .nf-combo-drop{display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--bg2);border:1px solid var(--accent);border-radius:var(--radius);z-index:50;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  .nf-combo.open .nf-combo-drop{display:block}
+  .nf-combo-opt{padding:7px 12px;font-size:13px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border)}
+  .nf-combo-opt:last-child{border-bottom:none}
+  .nf-combo-opt:hover,.nf-combo-opt.focused{background:rgba(124,106,247,.15);color:var(--accent2)}
+  .nf-combo-opt.hidden{display:none}
+  .nf-combo-empty{padding:7px 12px;font-size:12px;color:var(--muted);font-style:italic}
+  .nf-wrap{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:0}
+  .nf-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
+  .nf-section-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border)}
+  .nf-section-title{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .nf-row{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .nf-row:last-child{border-bottom:none}
+  .nf-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px}
+  .nf-field.full{flex:100%}
+  .nf-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+  .nf-input{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s;width:100%}
+  .nf-input:focus{border-color:var(--accent)}
+  .nf-input::placeholder{color:var(--muted)}
+  .nf-textarea{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;outline:none;resize:vertical;width:100%;min-height:80px;line-height:1.5;transition:border-color .15s}
+  .nf-textarea:focus{border-color:var(--accent)}
+  .nf-checkbox-wrap{display:flex;align-items:center;gap:8px;padding:9px 0}
+  .nf-checkbox-wrap input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+  .nf-checkbox-wrap label{font-size:13px;cursor:pointer}
+  /* Tag picker */
+  .nf-tagpicker{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0}
+  .nf-tag{font-size:12px;padding:3px 10px;border-radius:10px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all .12s;user-select:none;background:var(--bg3)}
+  .nf-tag:hover{border-color:var(--accent);color:var(--text)}
+  .nf-tag.selected{background:rgba(124,106,247,.2);border-color:var(--accent);color:var(--accent2)}
+  /* New item inline input */
+  .nf-new-wrap{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .nf-new-input{flex:1;min-width:120px;padding:5px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:12px;outline:none}
+  .nf-new-input:focus{border-color:var(--accent)}
+  .nf-new-btn{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);cursor:pointer;font-size:12px;font-family:var(--font);transition:all .12s;white-space:nowrap}
+  .nf-new-btn:hover{border-color:var(--accent);color:var(--text)}
+  /* Supplement rows */
+  .nf-supp-row{display:flex;align-items:center;gap:8px;padding:5px 0;flex-wrap:wrap}
+  .nf-supp-name{font-size:12px;font-weight:500;flex:1;min-width:120px}
+  .nf-supp-dose{width:100px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:12px;outline:none}
+  .nf-supp-dose:focus{border-color:var(--accent)}
+  .nf-supp-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:3px;line-height:1}
+  .nf-supp-remove:hover{color:var(--red)}
+  /* Cycle card */
+  .nf-cycle{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
+  .nf-cycle-head{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--bg3);border-bottom:1px solid var(--border)}
+  .nf-cycle-num{font-family:var(--mono);font-size:12px;color:var(--accent2);font-weight:500}
+  .nf-cycle-remove{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 7px;border-radius:4px;transition:all .12s}
+  .nf-cycle-remove:hover{color:var(--red);background:rgba(248,113,113,.1)}
+  .nf-cycles-wrap{display:flex;flex-direction:column}
+  .nf-footer{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+
+  /* PIN ekran */
+  .pin-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+  .pin-screen h2{font-size:20px;font-weight:600}
+  .pin-screen p{color:var(--muted);font-size:13px;text-align:center;max-width:280px;line-height:1.6}
+  .pin-input-row{display:flex;gap:10px}
+  .pin-d{width:52px;height:60px;text-align:center;font-size:24px;font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);outline:none;transition:border-color .15s}
+  .pin-d:focus{border-color:var(--accent)}
+  .pin-err{color:var(--red);font-size:13px;min-height:20px;text-align:center}
+  .pin-link{color:var(--accent2);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+
+  /* ---- WIZARD & HELP ---- */
+  .wiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:none;align-items:center;justify-content:center}
+  .wiz-overlay.open{display:flex}
+  .wiz-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:32px;width:90%;max-width:480px;text-align:center}
+  .wiz-icon{font-size:48px;margin-bottom:16px}
+  .wiz-title{font-size:18px;font-weight:600;margin-bottom:8px}
+  .wiz-desc{color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:24px}
+  .wiz-steps{display:flex;justify-content:center;gap:6px;margin-bottom:24px}
+  .wiz-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+  .wiz-dot.active{background:var(--accent)}
+  .wiz-btns{display:flex;gap:8px;justify-content:center}
+  .wiz-skip{font-size:12px;color:var(--muted);cursor:pointer;margin-top:12px;text-decoration:underline;text-underline-offset:3px}
+  .wiz-skip:hover{color:var(--text)}
+  .help-overlay{position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column;overflow:hidden}
+  .help-overlay.open{display:flex}
+  .help-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .help-header h2{font-size:16px;font-weight:600}
+  .help-body{flex:1;overflow-y:auto;padding:24px;max-width:720px;width:100%;margin:0 auto}
+  .help-section{margin-bottom:28px}
+  .help-section h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+  .help-tab-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .help-tab-row:last-child{border-bottom:none}
+  .help-tab-icon{font-size:18px;width:28px;flex-shrink:0;text-align:center}
+  .help-tab-name{font-size:13px;font-weight:500;margin-bottom:2px}
+  .help-tab-desc{font-size:12px;color:var(--muted);line-height:1.5}
+  .help-kbd{font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12px}
+  .help-shortcut-row{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}
+  .help-shortcut-keys{display:flex;gap:4px;min-width:120px}
+
+  /* ---- LIGHT MODE ---- */
+  [data-theme="light"]{
+    --bg:#f5f6f8; --bg2:#ffffff; --bg3:#eef0f3;
+    --border:#d8dce6; --border2:#c4c9d8;
+    --text:#1a1b1e; --muted:#6b7280;
+    --accent:#6355d4; --accent2:#7c6af7;
+    --green:#16a34a; --amber:#d97706; --red:#dc2626;
+    --radius:8px;
+  }
+  [data-theme="light"] .global-results{box-shadow:0 8px 32px rgba(0,0,0,.12)}
+  [data-theme="light"] .modal-backdrop{background:rgba(0,0,0,.3)}
+  [data-theme="light"] .nf-combo-drop{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+  [data-theme="light"] .tag.cat-zavest    {border-color:rgba(109,77,255,.3);color:#5b42d4;background:rgba(109,77,255,.08)}
+  [data-theme="light"] .tag.cat-entitete  {border-color:rgba(37,99,235,.3);color:#1d4ed8;background:rgba(37,99,235,.08)}
+  [data-theme="light"] .tag.cat-sposobnosti{border-color:rgba(22,163,74,.3);color:#15803d;background:rgba(22,163,74,.08)}
+  [data-theme="light"] .tag.cat-zaznava   {border-color:rgba(180,130,0,.3);color:#a16207;background:rgba(180,130,0,.08)}
+  [data-theme="light"] .tag.cat-prostor   {border-color:rgba(194,100,20,.3);color:#c2410c;background:rgba(194,100,20,.08)}
+  [data-theme="light"] .tag.cat-notranje  {border-color:rgba(190,50,140,.3);color:#be185d;background:rgba(190,50,140,.08)}
+  [data-theme="light"] .tag.cat-sexual    {border-color:rgba(220,38,38,.3);color:#dc2626;background:rgba(220,38,38,.08)}
+  [data-theme="light"] .tag.cat-other     {border-color:rgba(100,116,139,.3);color:#475569;background:rgba(100,116,139,.08)}
+  [data-theme="light"] .tag.tech {border-color:rgba(109,77,255,.25);color:#6355d4;background:rgba(109,77,255,.06)}
+  [data-theme="light"] .tag.supp {border-color:rgba(180,130,0,.25);color:#a16207;background:rgba(180,130,0,.06)}
+  [data-theme="light"] .tag.sign {border-color:rgba(220,38,38,.25);color:#dc2626;background:rgba(220,38,38,.06)}
+  [data-theme="light"] .tag.perc {border-color:rgba(99,85,212,.25);color:#6355d4;background:rgba(99,85,212,.06)}
+  [data-theme="light"] .tag.act  {border-color:rgba(29,78,216,.25);color:#1d4ed8;background:rgba(29,78,216,.06)}
+  [data-theme="light"] .highlight{background:rgba(217,119,6,.2);color:var(--text)}
+  [data-theme="light"] .unsaved-dot{background:var(--amber)}
+  [data-theme="light"] .toast{box-shadow:0 4px 12px rgba(0,0,0,.1)}
+  [data-theme="light"] .card-badge{background:rgba(99,85,212,.1);border-color:rgba(99,85,212,.2)}
+  [data-theme="light"] .card-badge-blue{background:rgba(29,78,216,.08);color:#1d4ed8;border-color:rgba(29,78,216,.2)}
+  [data-theme="light"] .card-badge-amber{background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.2)}
+  [data-theme="light"] .active-toggle{background:var(--accent)!important;color:#fff!important}
+  [data-theme="light"] .tab-count{background:var(--bg3);color:var(--muted)}
+  [data-theme="light"] .nav-tab.active .tab-count{background:rgba(99,85,212,.1);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Somnia</div>
+  <span class="db-badge" id="db-badge"></span>
+  <div class="global-search-wrap" id="global-search-wrap" style="margin-left:auto">
+    <svg class="global-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="global-search-input" id="global-search" placeholder="Globalno iskanje..." oninput="globalSearch(this.value)" autocomplete="off">
+    <button class="search-clear" id="global-clear" onclick="closeGlobalSearch();document.getElementById('global-search').focus()" style="right:8px">×</button>
+    <div class="global-results" id="global-results"></div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="file-btn" id="btn-open-db" onclick="fsa_open()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span id="lbl-openDb">Odpri SQLite</span>
+    </button>
+    <button class="file-btn" id="export-btn" onclick="fsa_save()" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--text);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span id="lbl-saveDb">Shrani .sqlite</span><span class="unsaved-dot" id="unsaved-dot" style="display:none"></span>
+    </button>
+  </div>
+  <div class="lang-toggle" id="lang-toggle"></div>
+  <button class="btn" id="help-btn" onclick="showHelp()" title="Pomoč" style="padding:7px 10px;font-size:15px;line-height:1">❓</button>
+  <button class="btn" id="lock-btn" onclick="lockBrowser()" title="Zakleni" style="padding:7px 10px;font-size:15px;line-height:1;display:none">🔒</button>
+  <button class="btn" id="theme-btn" onclick="toggleTheme()" title="Preklopi temo" style="padding:7px 10px;font-size:15px;line-height:1">🌓</button>
+  <input type="file" id="fi" accept=".sqlite,.db,.sqlite3" onchange="loadFile(event)">
+</header>
+
+<div class="nav-tabs" id="nav-tabs" style="display:none">
+  <div class="nav-tab active" onclick="switchTab('dreams')"      id="tab-dreams">🌙 Sanje<span class="tab-count" id="cnt-dreams"></span></div>
+  <div class="nav-tab"        onclick="switchTab('techniques')"  id="tab-techniques">🛠️ Tehnike<span class="tab-count" id="cnt-techniques"></span></div>
+  <div class="nav-tab"        onclick="switchTab('dreamsigns')"  id="tab-dreamsigns">🔮 Dream Signs<span class="tab-count" id="cnt-dreamsigns"></span></div>
+  <div class="nav-tab"        onclick="switchTab('supplements')" id="tab-supplements">💊 Suplementi<span class="tab-count" id="cnt-supplements"></span></div>
+  <div class="nav-tab"        onclick="switchTab('perceptions')" id="tab-perceptions">🫧 Perception Bubbles<span class="tab-count" id="cnt-perceptions"></span></div>
+  <div class="nav-tab"        onclick="switchTab('activities')"  id="tab-activities">🏃 Aktivnosti<span class="tab-count" id="cnt-activities"></span></div>
+  <div class="nav-tab"        onclick="switchTab('stats')"       id="tab-stats"><span id="lbl-tab-stats">📊 Statistike</span></div>
+  <div class="nav-tab"        onclick="switchTab('db')"          id="tab-db"><span id="lbl-tab-db">🗄 Baza</span></div>
+  <div class="nav-tab"        onclick="switchTab('newdream')"    id="tab-newdream"><span id="lbl-tab-newdream">✏️ Nova sanja</span><span class="tab-count" id="cnt-newdream"></span></div>
+</div>
+
+<div class="main">
+  <div class="content" id="content">
+
+    <div class="empty" id="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <h3 id="lbl-noDb">Ni odprte baze</h3>
+      <p><span id="lbl-noDbDesc">Klikni »Odpri SQLite« zgoraj in izberi</span> <code style="font-family:var(--mono);color:var(--accent2)">.sqlite</code> datoteko.<br><br><small style="color:var(--muted)" id="lbl-shortcuts">Bližnjice: <kbd style="font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:3px;border:1px solid var(--border)">/</kbd> iskanje &nbsp; <kbd style="font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:3px;border:1px solid var(--border)">←→</kbd> strani</small></p>
+    </div>
+
+    <!-- DREAMS -->
+    <div id="panel-dreams" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="dv-search" placeholder="Išči po naslovu, vsebini..." oninput="dvSearchInput()">
+          <button class="search-clear" id="dv-clear" onclick="dvClearSearch()">×</button>
+        </div>
+        <select id="dv-sort" onchange="dvFilter()">
+          <option value="id_desc">ID ↓</option><option value="id_asc">ID ↑</option>
+          <option value="date_desc">Datum ↓</option><option value="date_asc">Datum ↑</option>
+        </select>
+        <select id="dv-loc" onchange="dvFilter()"><option value="">Vse lokacije</option></select>
+        <select id="dv-cat" onchange="dvFilter()"><option value="">Vse kategorije</option></select>
+        <button class="btn" id="dv-bm-btn" onclick="dvToggleBookmark()" title="Samo zaznamki">★</button>
+        <button class="btn" onclick="dvExpandAll()" id="lbl-dv-expand">Razširi vse</button>
+        <button class="btn" onclick="dvCollapseAll()" id="lbl-dv-collapse">Skrni vse</button>
+        <div class="spacer"></div>
+        <span class="row-count" id="dv-count"></span>
+        <button class="btn" onclick="exportDreamsCSV()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+        </button>
+      </div>
+      <div class="card-view" id="dream-view"></div>
+      <div class="pagination" id="dv-pagination"></div>
+    </div>
+
+    <!-- GENERIC CARD PANELS (activities, perceptions, dreamsigns, techniques) -->
+    <div id="panel-activities"  style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+    <div id="panel-perceptions" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+    <div id="panel-dreamsigns"  style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+    <div id="panel-techniques"  style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+
+    <!-- SUPPLEMENTS (now generic panel like others) -->
+    <div id="panel-supplements" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+
+    <!-- NEW DREAM FORM -->
+    <div id="panel-newdream" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="nf-wrap" id="nf-wrap"></div>
+      <div class="nf-footer">
+        <button class="btn primary" onclick="nfSave()" id="btn-nf-save"><span id="lbl-nf-save">💾 Shrani sanje</span></button>
+        <button class="btn" id="btn-nf-reset" onclick="nfReset()">Ponastavi</button>
+        <span class="row-count" id="nf-status" style="margin-left:auto"></span>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div id="panel-stats" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="stats-view" id="stats-view"></div>
+    </div>
+
+    <!-- DB TAB (Tabele + SQL) -->
+    <div id="panel-db" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:relative">
+
+      <!-- Submode toolbar -->
+      <div style="display:flex;align-items:center;gap:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="display:flex">
+          <button class="db-mode-btn active" id="dbmode-tables" onclick="dbSetMode('tables')"><span id="lbl-dbmode-tables">📋 Tabele</span></button>
+          <button class="db-mode-btn" id="dbmode-sql" onclick="dbSetMode('sql')"><span id="lbl-dbmode-sql">🔍 SQL</span></button>
+        </div>
+        <!-- Tables toolbar -->
+        <div id="db-tb-toolbar" style="display:flex;align-items:center;gap:8px;flex:1;margin-left:12px">
+          <div class="search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input" id="tb-search" placeholder="Išči..." oninput="tbApply()">
+          </div>
+          <select id="tb-col" onchange="tbApply()"><option value="">${t('tb.allColumns')}</option></select>
+          <select id="tb-rpp" onchange="tbApply()">
+            <option value="50">50 / stran</option>
+            <option value="100">100 / stran</option>
+            <option value="250">250 / stran</option>
+            <option value="999999">Vse</option>
+          </select>
+          <div class="spacer"></div>
+          <span class="row-count" id="tb-count"></span>
+          <button class="btn primary" onclick="tbAddRow()" id="btn-tb-add"><span id="lbl-tb-add">+ Nova vrstica</span></button>
+          <button class="btn" onclick="tbExportCSV()" id="btn-tb-csv">CSV</button>
+          <button class="btn" onclick="tbExportJSON()" id="btn-tb-json">JSON</button>
+        </div>
+        <!-- SQL toolbar -->
+        <div id="db-sql-toolbar" style="display:none;align-items:center;gap:8px;flex:1;margin-left:12px">
+          <button class="btn" onclick="sqlRun()" title="Zaženi (Ctrl+Enter)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="lbl-sql-run">Zaženi</span>
+          </button>
+          <button class="btn" onclick="sqlClear()" id="lbl-sql-clear">Počisti</button>
+          <button class="btn" onclick="sqlSave()" id="btn-sql-save"><span id="lbl-sql-save">💾 Shrani</span></button>
+          <button class="btn" id="sql-export-btn" onclick="sqlExportCSV()" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+          </button>
+          <div class="spacer"></div>
+          <span class="row-count" id="sql-count"></span>
+          <button class="btn" id="btn-sql-help" onclick="sqlShowHelp()"><span id="lbl-sql-help">📖 Pomoč</span></button>
+        </div>
+      </div>
+
+      <!-- Sidebar (tables list) + main content -->
+      <div style="display:flex;flex:1;overflow:hidden">
+        <div class="sidebar" id="sidebar" style="display:flex;flex-direction:column">
+          <div class="sidebar-section" id="lbl-sidebar-tables">Tabele</div>
+          <div id="table-list" style="flex:1;overflow-y:auto"></div>
+
+        </div>
+
+        <!-- Tables view -->
+        <div id="db-tables-view" style="display:flex;flex:1;flex-direction:column;overflow:hidden">
+          <div class="table-wrap"><table><thead id="tb-head"></thead><tbody id="tb-body"></tbody></table></div>
+          <div class="pagination" id="tb-pagination"></div>
+        </div>
+
+        <!-- SQL view -->
+        <div id="db-sql-view" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:relative">
+          <textarea id="sql-input" placeholder="SELECT * FROM Dreams LIMIT 10" style="width:100%;height:130px;padding:12px 14px;background:var(--bg3);border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;resize:none;line-height:1.6;flex-shrink:0"></textarea>
+          <div id="sql-error" style="display:none;padding:8px 14px;background:rgba(248,113,113,.1);border-bottom:1px solid rgba(248,113,113,.3);color:var(--red);font-family:var(--mono);font-size:12px;flex-shrink:0"></div>
+          <div class="table-wrap" id="sql-result" style="flex:1"></div>
+          <div id="sql-help" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:50;overflow:auto;padding:24px 28px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <span style="font-size:16px;font-weight:500" id="lbl-sql-help-title">SQL Pomoč</span>
+              <button class="btn" id="btn-sql-close" onclick="document.getElementById('sql-help').style.display='none'"><span id="lbl-sql-close">× Zapri</span></button>
+            </div>
+            <!-- Shranjene poizvedbe -->
+            <div id="db-saved-section" style="margin-bottom:24px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px" id="lbl-saved-title">Shranjene poizvedbe</span>
+                <div class="search-wrap" style="margin-left:auto">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input class="search-input" id="sql-saved-search" placeholder="Išči poizvedbe..." oninput="renderSavedSQL()" style="width:200px">
+                </div>
+              </div>
+              <div id="sql-saved-list" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden"></div>
+              <div id="sql-saved-empty" style="display:none;padding:12px;color:var(--muted);font-size:13px;font-style:italic">Ni shranjenih poizvedb</div>
+            </div>
+            <div id="sql-help-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="overlay-pin-forgot" id="pin-forgot-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;width:90%;max-width:360px">
+    <h4 style="margin-bottom:8px;font-size:15px">Ponastavi PIN</h4>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.6">Vnesi recovery kodo ki si jo dobil ob nastavitvi PINa v setup.html:</p>
+    <input type="text" id="pin-recovery-input"
+      placeholder="XXXX-XXXX-XXXX-XXXX"
+      style="width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;letter-spacing:1px;margin-bottom:8px"
+      oninput="this.value=this.value.toUpperCase()">
+    <div id="pin-recovery-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="document.getElementById('pin-forgot-overlay').style.display='none'">Prekliči</button>
+      <button class="btn primary" onclick="submitPinRecovery()">Ponastavi</button>
+    </div>
+  </div>
+</div>
+<div class="wiz-overlay" id="wiz-overlay">
+  <div class="wiz-box">
+    <div class="wiz-steps" id="wiz-dots"></div>
+    <div class="wiz-icon" id="wiz-icon"></div>
+    <div class="wiz-title" id="wiz-title"></div>
+    <div class="wiz-desc" id="wiz-desc"></div>
+    <div class="wiz-btns">
+      <button class="btn" id="wiz-back" onclick="wizNav(-1)" style="display:none">← <span id="lbl-wiz-back">Nazaj</span></button>
+      <button class="btn primary" id="wiz-next" onclick="wizNav(1)"><span id="lbl-wiz-next">Naprej</span> →</button>
+    </div>
+    <div class="wiz-skip" onclick="wizClose()" id="lbl-wiz-skip">Preskoči uvod</div>
+  </div>
+</div>
+
+<div class="help-overlay" id="help-overlay">
+  <div class="help-header">
+    <h2 id="lbl-help-title">❓ Pomoč</h2>
+    <button class="btn" onclick="document.getElementById('help-overlay').classList.remove('open')">× <span id="lbl-help-close">Zapri</span></button>
+  </div>
+  <div class="help-body" id="help-body"></div>
+</div>
+
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h4 id="confirm-title"></h4>
+    <p id="confirm-msg"></p>
+    <div class="btns">
+      <button class="btn" onclick="confirmResolve(false)">Prekliči</button>
+      <button class="btn primary" onclick="confirmResolve(true)">Nadaljuj</button>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title" id="modal-title">Uredi</span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()" id="lbl-modal-cancel">Prekliči</button><button class="btn primary" onclick="saveRow()" id="lbl-modal-save">Shrani</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="lang/sl.js"></script>
+<script src="lang/en.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<script>
+/* ============================================================
+   DREAM JOURNAL DB BROWSER v4.1
+   ============================================================ */
+let currentLang = localStorage.getItem('somnia-lang') || 'sl';
+
+// Fallback za count.* če lang datoteke še niso naložene
+const _countFallback = {
+  'count.cycles':  (n) => n===1?'1 cikel':n<5?`${n} cikli`:`${n} ciklov`,
+  'count.dreams':  (n) => `${n} sanj`,
+  'count.records': (n) => `${n} zapisov`,
+  'count.rows':    (n) => `${n} vrstic`,
+  'count.entries': (n) => `${n} vnosov`,
+};
+function t(key, n) {
+  const dict = getLang(currentLang);
+  const sl   = getLang('sl');
+  const val  = dict[key] ?? sl[key] ?? _countFallback[key] ?? key;
+  if (typeof val === 'function') return val(n);
+  return val;
+}
+
+
+/* ---- Category colours ---- */
+const CAT_GROUP = {
+  'NS':'zavest','P':'zavest','FA':'zavest','LS':'zavest','ZS':'zavest','OBE':'zavest',
+  'Entities':'entitete','Meeting deceased':'entitete','Shared':'entitete',
+  'Super powers':'sposobnosti','Transformations':'sposobnosti','Healing':'sposobnosti',
+  'Perceptions':'zaznava','Sensations':'zaznava','Psychedelics':'zaznava',
+  'Locations':'prostor','Levels':'prostor','Portals':'prostor','Artefacts':'prostor',
+  'Memory':'notranje','Intentions':'notranje','Loop':'notranje',
+  'Sexual':'sexual','Other':'other'
+};
+function catClass(n){ const g=CAT_GROUP[n]; return g?'tag cat-'+g:'tag cat-other'; }
+
+/* ---- Global state ---- */
+let db=null, SQL=null;
+let currentTab='dreams', currentTable=null;
+let dvOnlyBookmarks=false;
+// Table browser state
+let tbAllRows=[],tbFiltered=[],tbPage=1,tbRpp=50,tbSortCol=null,tbSortDir=1,tbCols=[],tbInfo=[],tbEditIdx=null,tbIsNew=false;
+// Dream view state
+let dvDreams=[],dvFiltered=[],dvPage=1;
+const DV_PER_PAGE=20;
+let unsavedChanges=false;
+let loadingNewFile=false;
+function markUnsaved(){
+  unsavedChanges=true;
+  const dot=document.getElementById('unsaved-dot');
+  if(dot) dot.style.display='';
+  const btn=document.getElementById('export-btn');
+  if(btn) btn.style.borderColor='rgba(251,191,36,.5)';
+}
+function markSaved(){
+  unsavedChanges=false;
+  const dot=document.getElementById('unsaved-dot');
+  if(dot) dot.style.display='none';
+  const btn=document.getElementById('export-btn');
+  if(btn) btn.style.borderColor='';
+}
+function updateTabCount(ns, n){
+  const el=document.getElementById('cnt-'+ns);
+  if(el) el.textContent=n>0?n:'';
+}
+
+function updateAllTabCounts(){
+  // Direktni COUNT queries — hitro, brez nalaganja vseh podatkov
+  const counts={
+    activities:  rows('SELECT COUNT(*) FROM DailyActivities')[0]?.[0]??0,
+    perceptions: rows('SELECT COUNT(*) FROM PerceptionBubbles')[0]?.[0]??0,
+    dreamsigns:  rows('SELECT COUNT(*) FROM DreamSign')[0]?.[0]??0,
+    techniques:  rows('SELECT COUNT(*) FROM DCTechniques')[0]?.[0]??0,
+    supplements: rows('SELECT COUNT(*) FROM SCSupplements')[0]?.[0]??0,
+  };
+  Object.entries(counts).forEach(([ns,n])=>updateTabCount(ns,n));
+}
+// Supplements state — removed (now handled by tvState via TV_CONFIG)
+
+/* ---- Init ---- */
+initSqlJs({locateFile:f=>`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}`}).then(S=>SQL=S);
+
+/* ---- File ---- */
+function loadFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  loadingNewFile=true;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      db=new SQL.Database(new Uint8Array(ev.target.result));
+      document.getElementById('db-badge').textContent=file.name;
+      document.getElementById('db-badge').style.display='';
+      document.getElementById('export-btn').style.display='';
+      document.getElementById('export-btn').dataset.name=file.name;
+      document.getElementById('empty-state').style.display='none';
+      document.getElementById('nav-tabs').style.display='flex';
+      loadingNewFile=false; markSaved();
+      buildDreamView(); updateAllTabCounts(); switchTab('dreams'); applyLang();
+      document.title='Somnia — '+file.name;
+      wizCheck();
+      toast(t('toast.dbOpened')+': '+file.name,'ok');
+    }catch(err){toast('Napaka: '+err.message,'err');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function exportSQLite(){
+  const data=db.export();
+  const name=document.getElementById('export-btn').dataset.name||'export.sqlite';
+  dl(new Uint8Array(data),name,'application/x-sqlite3');
+  markSaved();
+  toast(t('toast.dbSaved')+': '+name,'ok');
+}
+
+/* ---- Tab switching ---- */
+const ALL_TABS=['dreams','techniques','dreamsigns','supplements','perceptions','activities','stats','db','newdream'];
+function switchTab(t){
+  currentTab=t;
+  ALL_TABS.forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+    const p=document.getElementById('panel-'+x);
+    p.style.display=x===t?'flex':'none';
+    if(x===t) p.style.flexDirection='column';
+  });
+  if(t==='db'){dbInit();}
+  else if(TV_CONFIG[t]) buildGenericTab(t);
+  if(t==='newdream'){
+    const ndEl=document.getElementById('nf-date');
+    if(ndEl&&!ndEl.value) ndEl.value=nfTodayStr();
+    setTimeout(()=>{const f=document.querySelector('#panel-newdream input:not([disabled]),#panel-newdream textarea:not([disabled])');if(f)f.focus();},80);
+  }
+  if(t==='stats')   buildStats();
+  if(t==='newdream') nfBuild();
+}
+
+/* ---- SQL helpers ---- */
+function safeExec(sql){try{return db.exec(sql);}catch(e){console.error('SQL:',e.message,sql.slice(0,120));return[];}}
+function safeRun(sql,params){
+  try{db.run(sql,params);markUnsaved();}
+  catch(e){console.error('SQL run:',e.message);throw e;}
+}
+function rows(sql){const r=safeExec(sql);return r[0]?.values||[];}
+function mapBy(sql,k,v){const m={};rows(sql).forEach(r=>m[r[k]]=r[v]);return m;}
+function groupBy(sql,ki){
+  const m={};
+  rows(sql).forEach(r=>{const k=r[ki];if(!m[k])m[k]=[];m[k].push(r);});
+  return m;
+}
+
+/* ---- Sidebar ---- */
+function loadTables(){
+  const res=db.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+  if(!res.length) return;
+  const tables=res[0].values.map(r=>r[0]);
+  const list=document.getElementById('table-list');
+  list.innerHTML='';
+  tables.forEach(t=>{
+    let cnt='?'; try{cnt=db.exec(`SELECT COUNT(*) FROM "${t}"`)[0].values[0][0];}catch{}
+    const d=document.createElement('div');
+    d.className='table-item'; d.dataset.t=t;
+    d.innerHTML=`<span class="tname">${t}</span><span class="tcount">${cnt}</span>`;
+    d.onclick=()=>{dbSetMode('tables');tbOpen(t);};
+    list.appendChild(d);
+  });
+  if(tables.length) tbOpen(tables[0]);
+}
+
+/* ============================================================
+   DREAM VIEW
+   ============================================================ */
+function buildDreamView(){
+  const dreams   =rows('SELECT DreamID,Date_,DreamTitle,Location FROM Dreams ORDER BY DreamID DESC');
+  const locations=mapBy('SELECT LocationId,Location FROM Location',0,1);
+  const cycles   =groupBy('SELECT SleepCycleID,DreamID,Time_,Contents,Comments,Bookmark,Activities FROM SleepCycle',1);
+  const cats     =groupBy(`SELECT dc.SleepCycleID,cat.DisplayName FROM DCDreamCategories dc JOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID`,0);
+  const techs    =groupBy(`SELECT dt.SleepCycleID,t.DisplayName FROM DCTechniques dt JOIN Techniques t ON dt.TechniquesID=t.TechniquesID`,0);
+  const supps    =groupBy(`SELECT ss.SleepCycleID,s.SupplementDescription,ss.Dosage FROM SCSupplements ss JOIN Supplements s ON ss.SupplementID=s.SupplementID`,0);
+  const signs    =groupBy('SELECT SleepCycleID,DreamSignName FROM DreamSign',0);
+  const percs    =groupBy('SELECT SleepCycleID,PerceptionBubbleName FROM PerceptionBubbles',0);
+  const acts     =groupBy(`SELECT da.DreamID,da.ActivityID,da.Title,da.Description,at.Activity FROM DailyActivities da LEFT JOIN ActivityType at ON da.ActivityTypeID=at.ActivityTypeID`,0);
+
+  dvDreams=dreams.map(d=>{
+    const dc=(cycles[d[0]]||[]).map(c=>({
+      id:c[0],time:c[2],contents:c[3],comments:c[4],bookmark:c[5],activities:c[6],
+      cats:(cats[c[0]]||[]).map(x=>x[1]),
+      techs:(techs[c[0]]||[]).map(x=>x[1]),
+      supps:(supps[c[0]]||[]).map(x=>x[1]+(x[2]?' '+x[2]:'')),
+      signs:(signs[c[0]]||[]).map(x=>x[1]),
+      percs:(percs[c[0]]||[]).map(x=>x[1]),
+    }));
+    return{
+      id:d[0],date:d[1],title:d[2]||'(brez naslova)',
+      location:locations[d[3]]||(d[3]?'#'+d[3]:''),
+      cycles:dc,
+      dailyActs:(acts[d[0]]||[]).map(a=>({id:a[1],title:a[2],desc:a[3],type:a[4]})),
+      hasBookmark:dc.some(c=>c.bookmark==1||c.bookmark===true)
+    };
+  });
+
+  const locSel=document.getElementById('dv-loc');
+  locSel.innerHTML=`<option value="">${t('dreams.allLocs')}</option>`;
+  [...new Set(dvDreams.map(d=>d.location).filter(Boolean))].sort()
+    .forEach(l=>{locSel.innerHTML+=`<option value="${esc(l)}">${esc(l)}</option>`;});
+
+  const catSel=document.getElementById('dv-cat');
+  catSel.innerHTML=`<option value="">${t('dreams.allCats')}</option>`;
+  [...new Set(dvDreams.flatMap(d=>d.cycles.flatMap(c=>c.cats)).filter(Boolean))].sort()
+    .forEach(c=>{catSel.innerHTML+=`<option value="${esc(c)}">${esc(c)}</option>`;});
+
+  dvFilter();
+}
+
+function dvSearchInput(){searchInput('dv-search','dv-clear',dvFilter,150);}
+function dvClearSearch(){clearSearch('dv-search','dv-clear',dvFilter);}
+function dvToggleBookmark(){
+  dvOnlyBookmarks=!dvOnlyBookmarks;
+  document.getElementById('dv-bm-btn').classList.toggle('active-toggle',dvOnlyBookmarks);
+  dvFilter();
+}
+
+function dvFilter(){
+  const q=document.getElementById('dv-search').value.toLowerCase().trim();
+  const loc=document.getElementById('dv-loc').value;
+  const cat=document.getElementById('dv-cat').value;
+  dvFiltered=dvDreams.filter(d=>{
+    if(dvOnlyBookmarks && !d.hasBookmark) return false;
+    if(loc && d.location!==loc) return false;
+    if(cat && !d.cycles.some(c=>c.cats.includes(cat))) return false;
+    if(!q) return true;
+    const hay=[d.title,d.date,d.location,
+      ...d.cycles.flatMap(c=>[c.contents,c.comments,c.activities,...c.cats,...c.techs,...c.supps,...c.signs,...c.percs]),
+      ...d.dailyActs.flatMap(a=>[a.title,a.desc,a.type])
+    ].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  const sort=document.getElementById('dv-sort').value;
+  dvFiltered.sort((a,b)=>{
+    if(sort==='id_asc')   return a.id-b.id;
+    if(sort==='id_desc')  return b.id-a.id;
+    if(sort==='date_asc') return (a.date||'').localeCompare(b.date||'');
+    return (b.date||'').localeCompare(a.date||'');
+  });
+  document.getElementById('dv-count').textContent=t('count.dreams', dvFiltered.length);
+  updateTabCount('dreams', dvFiltered.length);
+  dvPage=1; renderDreamPage();
+}
+
+function renderDreamPage(){
+  const dv=document.getElementById('dream-view');
+  dv.scrollTop=0;
+  const start=(dvPage-1)*DV_PER_PAGE;
+  const page=dvFiltered.slice(start,start+DV_PER_PAGE);
+  dv.innerHTML='';
+  if(!page.length){dv.innerHTML=`<div class="empty-view">${t('msg.noResults')}</div>`;dvPagination();return;}
+  const q=document.getElementById('dv-search').value.trim();
+  page.forEach(d=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`
+      <div class="card-header">
+        <span class="card-date">${esc(d.date||'—')}</span>
+        <span class="cycle-id" style="color:var(--accent2);font-size:11px">#${d.id}</span>
+        <span class="card-title">${highlight(d.title,q)}</span>
+        ${d.location?`<span class="card-loc">📍 ${esc(d.location)}</span>`:''}
+        ${d.hasBookmark?'<span class="cycle-bm">★</span>':''}
+        <span class="card-badge">${t('count.cycles',d.cycles.length)}</span>
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body">
+        <div class="card-export-bar">
+          <span>${t('btn.exportLabel')}</span>
+          <button class="export-btn-sm" onclick="exportDreamPrint(${d.id})">${t('card.exportPrint')}</button>
+          <button class="export-btn-sm" onclick="exportDreamMarkdown(${d.id})">${t('card.exportMd')}</button>
+        </div>
+        ${d.cycles.length?d.cycles.map(c=>renderCycle(c,q)).join(''):`<div class="no-items">${t('dreams.noCycles')}</div>`}
+        ${d.dailyActs.length?renderDailyActs(d.dailyActs,q):''}
+      </div>`;
+    card.querySelector('.card-header').addEventListener('click',()=>toggleCard(card,'.card'));
+    dv.appendChild(card);
+  });
+  dvPagination();
+}
+
+function renderCycle(c,q){
+  const tags=[
+    ...c.cats.map(t=>`<span class="${catClass(t)}" title="${esc(CAT_GROUP[t]||'other')}">🗂 ${esc(t)}</span>`),
+    ...c.techs.map(t=>`<span class="tag tech">⚙ ${esc(t)}</span>`),
+    ...c.supps.map(t=>`<span class="tag supp">💊 ${esc(t)}</span>`),
+    ...c.signs.map(t=>`<span class="tag sign">✦ ${esc(t)}</span>`),
+    ...c.percs.map(t=>`<span class="tag perc">◉ ${esc(t)}</span>`),
+  ].join('');
+  return `<div class="card-item">
+    <div class="card-item-head">
+      <span class="cycle-id">SC#${c.id}</span>
+      ${c.time?`<span class="cycle-time">${esc(c.time)}</span>`:''}
+      ${(c.bookmark==1||c.bookmark===true)?`<span class="cycle-bm">${t('misc.bookmark')}</span>`:''}
+    </div>
+    ${c.contents?`<div class="cycle-contents">${highlight(c.contents,q)}</div>`:''}
+    ${c.comments?`<div class="cycle-comments">${highlight(c.comments,q)}</div>`:''}
+    ${c.activities?`<div class="cycle-comments">${t('card.activities')}: ${highlight(c.activities,q)}</div>`:''}
+    ${tags?`<div class="cycle-tags">${tags}</div>`:''}
+  </div>`;
+}
+
+function renderDailyActs(acts,q){
+  return `<div class="card-item" style="background:rgba(129,194,255,.03)">
+    <div class="card-item-head"><span class="cycle-id" style="color:#81c2ff">${t("dreams.activities")}</span></div>
+    <div class="cycle-tags">
+      ${acts.map(a=>`<span class="tag act" style="cursor:pointer" onclick="jumpToActivity(${a.id})" title="${esc(a.desc||'')}">${highlight(a.type?a.type+': ':'',q)}${highlight(a.title||'—',q)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+function dvExpandAll() {toggleAll('#dream-view .card',true);}
+function dvCollapseAll(){toggleAll('#dream-view .card',false);}
+
+function dvPagination(){genericPagination('dv-pagination',dvFiltered,dvPage,DV_PER_PAGE,p=>{dvPage=p;renderDreamPage();});}
+
+
+/* ============================================================
+   IZVOZ POSAMEZNE SANJE
+   ============================================================ */
+function getDreamData(dreamId){
+  const d=dvDreams.find(x=>x.id==dreamId);
+  if(!d) return null;
+  return d;
+}
+
+function exportDreamPrint(dreamId){
+  const d=getDreamData(dreamId);
+  if(!d){toast(t('toast.dreamNotFound'),'err');return;}
+
+  const cyclesHtml=d.cycles.map(c=>{
+    const tags=[
+      ...c.cats.map(t=>`<span class="tag cat">${t}</span>`),
+      ...c.techs.map(t=>`<span class="tag tech">⚙ ${t}</span>`),
+      ...c.supps.map(t=>`<span class="tag supp">💊 ${t}</span>`),
+      ...c.signs.map(t=>`<span class="tag sign">✦ ${t}</span>`),
+      ...c.percs.map(t=>`<span class="tag perc">◉ ${t}</span>`),
+    ].join(' ');
+    return `<div class="cycle">
+      <div class="cycle-meta">
+        <strong>SC#${c.id}</strong>
+        ${c.time?`<span class="time">${c.time}</span>`:''}
+        ${(c.bookmark==1||c.bookmark===true)?`<span class="bm">${t('misc.bookmark')}</span>`:''}
+      </div>
+      ${c.contents?`<div class="contents">${c.contents.split('\n').join('<br>')}</div>`:''}
+      ${c.comments?`<div class="comments">${c.comments.split('\n').join('<br>')}</div>`:''}
+      ${c.activities?`<div class="comments">${t('card.activities')}: ${c.activities}</div>`:''}
+      ${tags?`<div class="tags">${tags}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const actsHtml=d.dailyActs.length?`<div class="section-title">${t("dreams.activities")}</div>
+    <div class="acts">${d.dailyActs.map(a=>`<span class="tag act">${a.type?a.type+': ':''}${a.title||'—'}</span>`).join(' ')}</div>`:'';
+
+  const html=`<!DOCTYPE html><html lang="sl"><head><meta charset="UTF-8">
+  <title>San #${d.id} — ${d.title}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Georgia',serif;font-size:14px;color:#1a1a1a;max-width:720px;margin:40px auto;padding:0 30px;line-height:1.7}
+    h1{font-size:22px;font-weight:600;margin-bottom:4px;color:#111}
+    .meta{font-size:12px;color:#666;margin-bottom:24px;display:flex;gap:16px;flex-wrap:wrap}
+    .meta span{display:flex;align-items:center;gap:4px}
+    .cycle{border-left:3px solid #ddd;padding:12px 0 12px 16px;margin-bottom:16px}
+    .cycle-meta{font-size:12px;color:#888;margin-bottom:8px;display:flex;gap:10px;align-items:center}
+    .cycle-meta strong{color:#444;font-size:13px}
+    .time{color:#c8850a}
+    .bm{color:#c8850a;font-size:11px}
+    .contents{font-size:14px;color:#1a1a1a;margin-bottom:8px;white-space:pre-wrap}
+    .comments{font-size:13px;color:#555;font-style:italic;margin-bottom:8px;white-space:pre-wrap}
+    .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .tag{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid #ddd;color:#555}
+    .tag.cat{background:#f0f4ff;border-color:#c5d0f5;color:#3a52c4}
+    .tag.tech{background:#f5f0ff;border-color:#d5c5f5;color:#6a3ac4}
+    .tag.supp{background:#fffbf0;border-color:#f5dfa0;color:#a07010}
+    .tag.sign{background:#fff0f0;border-color:#f5c5c5;color:#c43a3a}
+    .tag.perc{background:#f0fff5;border-color:#c5f5d5;color:#1a7a3a}
+    .tag.act{background:#f0f8ff;border-color:#b0d8f5;color:#1a5a8a}
+    .section-title{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:20px 0 8px}
+    .acts{display:flex;flex-wrap:wrap;gap:5px}
+    hr{border:none;border-top:1px solid #eee;margin:24px 0}
+    @media print{body{margin:20px;padding:0}button{display:none}}
+  
+
+  /* PIN ekran */
+  .pin-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+  .pin-screen h2{font-size:20px;font-weight:600}
+  .pin-screen p{color:var(--muted);font-size:13px;text-align:center;max-width:280px;line-height:1.6}
+  .pin-input-row{display:flex;gap:10px}
+  .pin-d{width:52px;height:60px;text-align:center;font-size:24px;font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);outline:none;transition:border-color .15s}
+  .pin-d:focus{border-color:var(--accent)}
+  .pin-err{color:var(--red);font-size:13px;min-height:20px;text-align:center}
+  .pin-link{color:var(--accent2);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+
+  /* ---- WIZARD & HELP ---- */
+  .wiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:none;align-items:center;justify-content:center}
+  .wiz-overlay.open{display:flex}
+  .wiz-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:32px;width:90%;max-width:480px;text-align:center}
+  .wiz-icon{font-size:48px;margin-bottom:16px}
+  .wiz-title{font-size:18px;font-weight:600;margin-bottom:8px}
+  .wiz-desc{color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:24px}
+  .wiz-steps{display:flex;justify-content:center;gap:6px;margin-bottom:24px}
+  .wiz-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+  .wiz-dot.active{background:var(--accent)}
+  .wiz-btns{display:flex;gap:8px;justify-content:center}
+  .wiz-skip{font-size:12px;color:var(--muted);cursor:pointer;margin-top:12px;text-decoration:underline;text-underline-offset:3px}
+  .wiz-skip:hover{color:var(--text)}
+  .help-overlay{position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column;overflow:hidden}
+  .help-overlay.open{display:flex}
+  .help-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .help-header h2{font-size:16px;font-weight:600}
+  .help-body{flex:1;overflow-y:auto;padding:24px;max-width:720px;width:100%;margin:0 auto}
+  .help-section{margin-bottom:28px}
+  .help-section h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+  .help-tab-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .help-tab-row:last-child{border-bottom:none}
+  .help-tab-icon{font-size:18px;width:28px;flex-shrink:0;text-align:center}
+  .help-tab-name{font-size:13px;font-weight:500;margin-bottom:2px}
+  .help-tab-desc{font-size:12px;color:var(--muted);line-height:1.5}
+  .help-kbd{font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12px}
+  .help-shortcut-row{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}
+  .help-shortcut-keys{display:flex;gap:4px;min-width:120px}
+
+  /* ---- LIGHT MODE ---- */
+  [data-theme="light"]{
+    --bg:#f5f6f8; --bg2:#ffffff; --bg3:#eef0f3;
+    --border:#d8dce6; --border2:#c4c9d8;
+    --text:#1a1b1e; --muted:#6b7280;
+    --accent:#6355d4; --accent2:#7c6af7;
+    --green:#16a34a; --amber:#d97706; --red:#dc2626;
+    --radius:8px;
+  }
+  [data-theme="light"] .global-results{box-shadow:0 8px 32px rgba(0,0,0,.12)}
+  [data-theme="light"] .nf-combo-drop{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+  [data-theme="light"] .tag.cat-zavest    {border-color:rgba(109,77,255,.3);color:#5b42d4;background:rgba(109,77,255,.08)}
+  [data-theme="light"] .tag.cat-entitete  {border-color:rgba(37,99,235,.3);color:#1d4ed8;background:rgba(37,99,235,.08)}
+  [data-theme="light"] .tag.cat-sposobnosti{border-color:rgba(22,163,74,.3);color:#15803d;background:rgba(22,163,74,.08)}
+  [data-theme="light"] .tag.cat-zaznava   {border-color:rgba(180,130,0,.3);color:#a16207;background:rgba(180,130,0,.08)}
+  [data-theme="light"] .tag.cat-prostor   {border-color:rgba(194,100,20,.3);color:#c2410c;background:rgba(194,100,20,.08)}
+  [data-theme="light"] .tag.cat-notranje  {border-color:rgba(190,50,140,.3);color:#be185d;background:rgba(190,50,140,.08)}
+  [data-theme="light"] .tag.cat-sexual    {border-color:rgba(220,38,38,.3);color:#dc2626;background:rgba(220,38,38,.08)}
+  [data-theme="light"] .tag.cat-other     {border-color:rgba(100,116,139,.3);color:#475569;background:rgba(100,116,139,.08)}
+  [data-theme="light"] .tag.tech {border-color:rgba(109,77,255,.25);color:#6355d4;background:rgba(109,77,255,.06)}
+  [data-theme="light"] .tag.supp {border-color:rgba(180,130,0,.25);color:#a16207;background:rgba(180,130,0,.06)}
+  [data-theme="light"] .tag.sign {border-color:rgba(220,38,38,.25);color:#dc2626;background:rgba(220,38,38,.06)}
+  [data-theme="light"] .tag.perc {border-color:rgba(99,85,212,.25);color:#6355d4;background:rgba(99,85,212,.06)}
+  [data-theme="light"] .tag.act  {border-color:rgba(29,78,216,.25);color:#1d4ed8;background:rgba(29,78,216,.06)}
+  [data-theme="light"] .highlight{background:rgba(217,119,6,.2);color:var(--text)}
+  [data-theme="light"] .unsaved-dot{background:var(--amber)}
+  [data-theme="light"] .toast{box-shadow:0 4px 12px rgba(0,0,0,.1)}
+  [data-theme="light"] .card-badge{background:rgba(99,85,212,.1);border-color:rgba(99,85,212,.2)}
+  [data-theme="light"] .card-badge-blue{background:rgba(29,78,216,.08);color:#1d4ed8;border-color:rgba(29,78,216,.2)}
+  [data-theme="light"] .card-badge-amber{background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.2)}
+  [data-theme="light"] .active-toggle{background:var(--accent)!important;color:#fff!important}
+  [data-theme="light"] .tab-count{background:var(--bg3);color:var(--muted)}
+  [data-theme="light"] .nav-tab.active .tab-count{background:rgba(99,85,212,.1);color:var(--accent)}
+</style></head><body>
+  <h1>${d.title}</h1>
+  <div class="meta">
+    <span>📅 ${d.date||'—'}</span>
+    <span>#${d.id}</span>
+    ${d.location?`<span>📍 ${d.location}</span>`:''}
+    ${d.hasBookmark?`<span>${t('misc.bookmark')}</span>`:''}
+    <span>${t('count.cycles',d.cycles.length)}</span>
+  </div>
+  <hr>
+  ${cyclesHtml||'<p style="color:#888;font-style:italic">Ni sleep cycle zapisov</p>'}
+  ${actsHtml}
+  </body></html>`;
+
+  const w=window.open('','_blank','width=800,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),400);
+}
+
+function exportDreamMarkdown(dreamId){
+  const d=getDreamData(dreamId);
+  if(!d){toast(t('toast.dreamNotFound'),'err');return;}
+
+  let md=`# ${d.title}\n\n`;
+  md+=`${t('md.date')} ${d.date||'—'}  \n`;
+  md+=`**ID:** #${d.id}  \n`;
+  if(d.location) md+=`${t('md.location')} ${d.location}  \n`;
+  if(d.hasBookmark) md+=`${t('md.bookmark')}  \n`;
+  md+=`\n---\n\n`;
+
+  d.cycles.forEach(c=>{
+    md+=`## Sleep Cycle #${c.id}`;
+    if(c.time) md+=` — ${c.time}`;
+    if(c.bookmark==1||c.bookmark===true) md+=' ★';
+    md+='\n\n';
+    if(c.contents) md+=`${c.contents}\n\n`;
+    if(c.comments) md+=`*${c.comments}*\n\n`;
+    if(c.activities) md+=`*${t('md.activities')}: ${c.activities}*\n\n`;
+    const tags=[];
+    if(c.cats.length)  tags.push(t('nf.categories')+': '+c.cats.join(', '));
+    if(c.techs.length) tags.push(t('nf.techniques')+': '+c.techs.join(', '));
+    if(c.supps.length) tags.push(t('card.supplements')+': '+c.supps.join(', '));
+    if(c.signs.length) tags.push('Dream Signs: '+c.signs.join(', '));
+    if(c.percs.length) tags.push('Perceptions: '+c.percs.join(', '));
+    if(tags.length) md+=tags.map(t=>`> ${t}`).join('\n')+'\n\n';
+    md+='---\n\n';
+  });
+
+  if(d.dailyActs.length){
+    md+=`${t('md.dailyActs')}\n\n`;
+    d.dailyActs.forEach(a=>{
+      md+=`- **${a.type?a.type+': ':''}${a.title||'—'}**`;
+      if(a.desc) md+=` — ${a.desc}`;
+      md+='\n';
+    });
+    md+='\n';
+  }
+
+  const filename=`san_${d.id}_${(d.date||'').replace(/\./g,'-')||t('md.noDate')}.md`;
+  dl(md, filename, 'text/markdown');
+  toast(t('toast.markdownExported')+': '+filename,'ok');
+}
+
+function exportDreamsCSV(){
+  const hdr=['DreamID','Date','Title','Location','SleepCycleID','Time','Contents','Comments','Bookmark','Activities','Categories','Techniques','Supplements','DreamSigns','Perceptions'];
+  const dataRows=[];
+  dvFiltered.forEach(d=>{
+    if(!d.cycles.length){dataRows.push([d.id,d.date,d.title,d.location,'','','','','','','','','','','']);}
+    else d.cycles.forEach(c=>dataRows.push([d.id,d.date,d.title,d.location,
+      c.id,c.time,c.contents,c.comments,c.bookmark?1:0,c.activities,
+      c.cats.join(';'),c.techs.join(';'),c.supps.join(';'),c.signs.join(';'),c.percs.join(';')]));
+  });
+  const csv=[hdr,...dataRows].map(r=>r.map(csvCell).join(',')).join('\n');
+  dl(csv,'dreams_export.csv','text/csv');
+  toast(t('count.rows',dataRows.length)+' '+t('toast.exported'),'ok');
+}
+
+/* ============================================================
+   GENERIC GROUPED TAB VIEW
+   All card tabs (activities, perceptions, dreamsigns, techniques,
+   supplements) share one buildGenericTab / tvFilter / tvRender pipeline.
+
+   Each TV_CONFIG entry describes:
+     query        — SQL that returns flat rows
+     searchFields — column indices to match search query against
+     groupKey     — column index used as grouping key
+     groupLabel   — column index used as group card title
+     groupBadge   — optional fn(group) → badge HTML shown in card header
+     renderItem   — fn(row, q) → HTML string for one item inside a group
+     exportHeaders / exportRow / exportFile — CSV export
+   ============================================================ */
+// Factory for tabs that group by a name column, with SC# metadata and optional description body
+function makeNameGroupedTab({prefix, table, idCol, nameCol, descCol, exportFile, placeholderKey:optPlaceholderKey}){
+  const options={placeholderKey:optPlaceholderKey};
+  const p=prefix;
+  return {
+    searchId:`${p}-search`, clearId:`${p}-clear`, countId:`${p}-count`, placeholderKey:options.placeholderKey||'ph.search',
+    viewId:`${p}-view`, pgId:`${p}-pagination`, RPP:20,
+    query:`SELECT e.${idCol}, e.SleepCycleID, e.${nameCol}, e.${descCol},
+                  d.DreamID, d.Date_, d.DreamTitle
+           FROM ${table} e
+           LEFT JOIN SleepCycle sc ON e.SleepCycleID=sc.SleepCycleID
+           LEFT JOIN Dreams d       ON sc.DreamID=d.DreamID
+           ORDER BY d.DreamID DESC, e.${idCol} ASC`,
+    searchFields:[2,3,4,5,6],
+    groupKey: r=>r[2]||'—',
+    groupLabel: r=>r[2]||'—',
+    groupHeaderExtra:(g)=>{const n=g.items.length;return `<span class="card-badge">${t('count.entries',n)}</span>`;},
+    renderItem:(r,q)=>({
+      dreamId:r[4],
+      head:`<span class="card-date" style="min-width:unset">${esc(r[5]||'—')}</span>
+            <span class="card-badge card-badge-blue" style="font-size:10px">Dream #${r[4]}</span>
+            <span class="sub-card-title">${esc(r[6]||t('card.noTitle'))}</span>
+            <span class="cycle-id">SC#${r[1]}</span>`,
+      body:r[3]?`<div class="card-item-desc">${highlight(r[3],q)}</div>`:''
+    }),
+    exportHeaders:['ID','SleepCycleID','Ime','Opis','DreamID','Datum','San'],
+    exportRow:r=>r, exportFile
+  };
+}
+
+const TV_CONFIG = {
+  activities: {
+    searchId:'av-search', clearId:'av-clear', countId:'av-count', viewId:'av-view', pgId:'av-pagination', placeholderKey:'ph.searchActivities',
+    RPP:20,
+    query:`SELECT da.ActivityID, da.DreamID, d.Date_, d.DreamTitle,
+                  at.Activity, da.Title, da.Description
+           FROM DailyActivities da
+           LEFT JOIN Dreams d       ON da.DreamID=d.DreamID
+           LEFT JOIN ActivityType at ON da.ActivityTypeID=at.ActivityTypeID
+           ORDER BY da.DreamID DESC, da.ActivityID ASC`,
+    searchFields:[1,2,3,4,5,6],
+    // group by ActivityType (col 4), fall back to "—" if null
+    groupKey: r => r[4]||'—',
+    groupHeaderExtra: (g) => {
+      const n=g.items.length;
+      return `<span class="card-badge">${t('count.entries',n)}</span>`;
+    },
+    renderItem:(r,q)=>({
+      dreamId:r[1],
+      head:`<span class="card-date" style="min-width:unset">${esc(r[2]||'—')}</span>
+            <span class="card-badge card-badge-blue" style="font-size:10px">Dream #${r[1]}</span>
+            <span class="sub-card-title">${highlight(r[5]||'—',q)}</span>`,
+      body:`${r[6]?`<div class="card-item-desc" style="margin-bottom:4px">${highlight(r[6],q)}</div>`:''}
+            <div style="font-size:11px;color:var(--muted)">${esc(r[3]||t('card.noTitle'))}</div>`
+    }),
+    exportHeaders:['ActivityID','DreamID','Datum','San','Tip','Naslov','Opis'],
+    exportRow:r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6]],
+    exportFile:'activities.csv'
+  },
+
+  perceptions: makeNameGroupedTab({
+    prefix:'pb', table:'PerceptionBubbles', idCol:'PerceptionBubbleID',
+    nameCol:'PerceptionBubbleName', descCol:'PerceptionBubbleDescription',
+    exportFile:'perception_bubbles.csv', placeholderKey:'ph.searchPerceptions'
+  }),
+
+  dreamsigns: makeNameGroupedTab({
+    prefix:'ds', table:'DreamSign', idCol:'DreamSignID',
+    nameCol:'DreamSignName', descCol:'DreamSignDescription',
+    exportFile:'dream_signs.csv', placeholderKey:'ph.searchDreamSigns'
+  }),
+
+  techniques:{
+    searchId:'tc-search', clearId:'tc-clear', countId:'tc-count', viewId:'tc-view', pgId:'tc-pagination', placeholderKey:'ph.searchTechniques',
+    RPP:20,
+    query:`SELECT dt.DCTechniquesID, dt.SleepCycleID, t.DisplayName, t.FullName,
+                  d.DreamID, d.Date_, d.DreamTitle
+           FROM DCTechniques dt
+           JOIN Techniques t         ON dt.TechniquesID=t.TechniquesID
+           LEFT JOIN SleepCycle sc   ON dt.SleepCycleID=sc.SleepCycleID
+           LEFT JOIN Dreams d        ON sc.DreamID=d.DreamID
+           ORDER BY d.DreamID DESC, dt.DCTechniquesID ASC`,
+    searchFields:[2,3,4,5,6],
+    groupKey: r => r[2]||'—',
+    groupHeaderExtra:(g)=>{
+      const n=g.items.length;
+      const fullName=g.items[0]?.[3];
+      return (fullName?`<span class="card-loc" style="font-size:11px">${esc(fullName)}</span>`:'')+
+             `<span class="card-badge">${t('count.entries',n)}</span>`;
+    },
+    renderItem:(r,q)=>({
+      dreamId:r[4],
+      head:`<span class="card-date" style="min-width:unset">${esc(r[5]||'—')}</span>
+            <span class="card-badge card-badge-blue" style="font-size:10px">Dream #${r[4]}</span>
+            <span class="sub-card-title">${esc(r[6]||t('card.noTitle'))}</span>
+            <span class="cycle-id">SC#${r[1]}</span>`,
+      body:``
+    }),
+    exportHeaders:['ID','SleepCycleID','Tehnika','PolnoIme','DreamID','Datum','San'],
+    exportRow:r=>r,
+    exportFile:'techniques.csv'
+  },
+
+  supplements:{
+    searchId:'sv-search', clearId:'sv-clear', countId:'sv-count', viewId:'sv-view', pgId:'sv-pagination', placeholderKey:'ph.searchSupplements',
+    RPP:20,
+    query:`SELECT ss.SCSupplementsID, ss.SleepCycleID, ss.Dosage,
+                  s.SupplementID, s.SupplementDescription, s.SupplementsUnit,
+                  st.SupplementsTypeID, st.SupplementType,
+                  d.DreamID, d.Date_, d.DreamTitle
+           FROM SCSupplements ss
+           LEFT JOIN Supplements s       ON ss.SupplementID=s.SupplementID
+           LEFT JOIN SupplementsType st  ON s.SupplementTypeID=st.SupplementsTypeID
+           LEFT JOIN SleepCycle sc       ON ss.SleepCycleID=sc.SleepCycleID
+           LEFT JOIN Dreams d            ON sc.DreamID=d.DreamID
+           ORDER BY s.SupplementDescription ASC, d.Date_ DESC`,
+    searchFields:[4,5,7,2,9,10],
+    groupKey: r => r[3]??'x',         // SupplementID
+    groupLabel: r => r[4]||'—',
+    groupHeaderExtra:(g)=>{
+      const n=g.items.length;
+      const type=g.items[0]?.[7];
+      return (type?`<span class="type-badge">${esc(type)}</span>`:'')+
+             `<span class="card-badge card-badge-amber">${t('count.entries',n)}</span>`;
+    },
+    renderItem:(r,q)=>{
+      const dose=[r[2],r[5]].filter(Boolean).join(' ');
+      return {
+        dreamId:r[8]||null,
+        head:`<span class="card-date" style="min-width:unset">${esc(r[9]||'—')}</span>
+              <span class="card-badge card-badge-blue" style="font-size:10px">Dream #${r[8]}</span>
+              ${dose?`<span class="type-badge type-badge-amber">${highlight(dose,q)}</span>`:''}
+              <span class="sub-card-title">${esc(r[10]||t('card.noTitle'))}</span>`,
+        body:``
+      };
+    },
+    exportHeaders:['SCSupplementsID','SleepCycleID','Preparat','Tip','Doza','Enota','DreamID','Datum','San'],
+    exportRow:r=>[r[0],r[1],r[4],r[7],r[2],r[5],r[8],r[9],r[10]],
+    exportFile:'supplements_history.csv'
+  }
+};
+
+// Per-tab state
+const tvState={};
+ALL_TABS.forEach(t=>{if(TV_CONFIG[t]) tvState[t]={all:[],groups:[],filtered:[],page:1};});
+
+function buildGenericTab(ns){
+  const cfg=TV_CONFIG[ns];
+  const panel=document.getElementById('panel-'+ns);
+  if(!document.getElementById(cfg.viewId)){
+    panel.innerHTML=`
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="${cfg.searchId}" placeholder="${t(cfg.placeholderKey||'ph.search')}" oninput="tvSearchInput('${ns}')">
+          <button class="search-clear" id="${cfg.clearId}" onclick="tvClearSearch('${ns}')">×</button>
+        </div>
+        <button class="btn" onclick="tvExpandAll('${ns}')">${t('btn.expandAll')}</button>
+        <button class="btn" onclick="tvCollapseAll('${ns}')">${t('btn.collapseAll')}</button>
+        <div class="spacer"></div>
+        <span class="row-count" id="${cfg.countId}"></span>
+        <button class="btn" onclick="tvExportCSV('${ns}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+        </button>
+      </div>
+      <div class="card-view" id="${cfg.viewId}"></div>
+      <div class="pagination" id="${cfg.pgId}"></div>`;
+  }
+  tvState[ns].all=rows(cfg.query);
+  tvFilter(ns);
+}
+
+function tvFilter(ns){
+  const cfg=TV_CONFIG[ns];
+  const q=document.getElementById(cfg.searchId).value.toLowerCase().trim();
+
+  // Filter flat rows first
+  const matchedRows=tvState[ns].all.filter(r=>{
+    if(!q) return true;
+    return cfg.searchFields.some(i=>r[i]!=null&&String(r[i]).toLowerCase().includes(q));
+  });
+
+  // Group matched rows
+  const map={}, order=[];
+  matchedRows.forEach(r=>{
+    const key=cfg.groupKey(r);
+    if(!map[key]){map[key]={label:(cfg.groupLabel||cfg.groupKey)(r),items:[]};order.push(key);}
+    map[key].items.push(r);
+  });
+  tvState[ns].groups=order.map(k=>map[k]);
+  tvState[ns].page=1;
+
+  const total=tvState[ns].groups.length;
+  const totalRows=tvState[ns].all.length;
+  document.getElementById(cfg.countId).textContent=t('count.records', total);
+  updateTabCount(ns, tvState[ns].all.length);
+  tvRender(ns);
+}
+
+function tvRender(ns){
+  const cfg=TV_CONFIG[ns];
+  const st=tvState[ns];
+  const q=document.getElementById(cfg.searchId).value.trim();
+  const view=document.getElementById(cfg.viewId);
+  view.scrollTop=0;
+  const start=(st.page-1)*cfg.RPP;
+  const page=st.groups.slice(start,start+cfg.RPP);
+  view.innerHTML='';
+  if(!page.length){
+    view.innerHTML=`<div class="empty-view">${t('msg.noResults')}</div>`;
+    genericPagination(cfg.pgId,st.groups,st.page,cfg.RPP,p=>{st.page=p;tvRender(ns);});
+    return;
+  }
+  page.forEach(g=>{
+    const card=document.createElement('div');
+    card.className='card';
+    const extra=cfg.groupHeaderExtra?cfg.groupHeaderExtra(g):'';
+    card.innerHTML=`
+      <div class="card-header">
+        <span class="card-title">${highlight(g.label,q)}</span>
+        ${extra}
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body"></div>`;
+    card.querySelector('.card-header').addEventListener('click',()=>toggleCard(card,`#${cfg.viewId} .card`));
+    // Build sub-cards (collapsible items)
+    const cardBody=card.querySelector('.card-body');
+    g.items.forEach(r=>{
+      const item=cfg.renderItem(r,q);
+      const sub=document.createElement('div');
+      sub.className='sub-card';
+      const hasBody=item.body&&item.body.trim()!=='';
+      const moonBtn=item.dreamId
+        ?`<button class="link-btn" onclick="event.stopPropagation();jumpToDream(${item.dreamId})" title="${t('card.openDream')}" style="opacity:.7;margin-left:auto">🌙</button>`
+        :`<span style="margin-left:auto"></span>`;
+      const chevron=hasBody?`<span class="sub-card-chevron">▶</span>`:'';
+      sub.innerHTML=`<div class="sub-card-header" style="${hasBody?'':'cursor:default'}">${item.head}${moonBtn}${chevron}</div>
+                     ${hasBody?`<div class="sub-card-body">${item.body}</div>`:''}`;
+      if(hasBody){
+        sub.querySelector('.sub-card-header').addEventListener('click',e=>{
+          e.stopPropagation();
+          sub.classList.toggle('open');
+        });
+      }
+      cardBody.appendChild(sub);
+    });
+    view.appendChild(card);
+  });
+  genericPagination(cfg.pgId,st.groups,st.page,cfg.RPP,p=>{st.page=p;tvRender(ns);});
+}
+
+function tvSearchInput(ns){const cfg=TV_CONFIG[ns];searchInput(cfg.searchId,cfg.clearId,()=>tvFilter(ns));}
+function tvClearSearch(ns){const cfg=TV_CONFIG[ns];clearSearch(cfg.searchId,cfg.clearId,()=>tvFilter(ns));}
+function tvExpandAll(ns) {toggleAll(`#${TV_CONFIG[ns].viewId} .card`,true);}
+function tvCollapseAll(ns){toggleAll(`#${TV_CONFIG[ns].viewId} .card`,false);}
+function tvExportCSV(ns){
+  const cfg=TV_CONFIG[ns];
+  const allRows=tvState[ns].groups.flatMap(g=>g.items);
+  const csv=[cfg.exportHeaders,...allRows.map(r=>cfg.exportRow(r))].map(r=>r.map(csvCell).join(',')).join('\n');
+  dl(csv,cfg.exportFile,'text/csv');
+  toast(t('count.records',allRows.length)+' '+t('toast.exported'),'ok');
+}
+
+/* ============================================================
+   JUMP NAVIGATION
+   ============================================================ */
+function jumpToDream(dreamId){
+  document.getElementById('dv-search').value='';
+  document.getElementById('dv-clear').classList.remove('visible');
+  document.getElementById('dv-loc').value='';
+  document.getElementById('dv-cat').value='';
+  document.getElementById('dv-sort').value='id_desc';
+  dvOnlyBookmarks=false;
+  document.getElementById('dv-bm-btn').classList.remove('active-toggle');
+  dvFilter();
+  switchTab('dreams');
+  const idx=dvFiltered.findIndex(d=>d.id==dreamId);
+  if(idx===-1) return;
+  dvPage=Math.ceil((idx+1)/DV_PER_PAGE);
+  renderDreamPage();
+  setTimeout(()=>{
+    const cards=document.querySelectorAll('#dream-view .card');
+    const ci=idx-(dvPage-1)*DV_PER_PAGE;
+    if(cards[ci]){cards[ci].classList.add('open');cards[ci].scrollIntoView({behavior:'smooth',block:'start'});}
+  },50);
+  toast('San #'+dreamId,'ok');
+}
+
+function jumpToActivity(activityId){
+  switchTab('activities');
+  setTimeout(()=>{
+    // Find which row has this activityId, then find its group in the grouped state
+    const row=tvState.activities.all.find(r=>r[0]==activityId);
+    if(!row) return;
+    const groupLabel=TV_CONFIG.activities.groupKey(row);
+    const groupIdx=tvState.activities.groups.findIndex(g=>g.label===groupLabel);
+    if(groupIdx===-1) return;
+    tvState.activities.page=Math.ceil((groupIdx+1)/TV_CONFIG.activities.RPP);
+    tvRender('activities');
+    setTimeout(()=>{
+      const cards=document.querySelectorAll('#av-view .card');
+      const ci=groupIdx-(tvState.activities.page-1)*TV_CONFIG.activities.RPP;
+      if(cards[ci]){cards[ci].classList.add('open');cards[ci].scrollIntoView({behavior:'smooth',block:'start'});}
+    },50);
+    toast('Aktivnost #'+activityId,'ok');
+  },100);
+}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+function buildStats(){
+  const sv=document.getElementById('stats-view');
+  sv.innerHTML='';
+
+  const nDreams =rows('SELECT COUNT(*) FROM Dreams')[0]?.[0]??0;
+  const nCycles =rows('SELECT COUNT(*) FROM SleepCycle')[0]?.[0]??0;
+  const nActs   =rows('SELECT COUNT(*) FROM DailyActivities')[0]?.[0]??0;
+  const nSigns  =rows('SELECT COUNT(*) FROM DreamSign')[0]?.[0]??0;
+  const nBookm  =rows('SELECT COUNT(*) FROM SleepCycle WHERE Bookmark=1')[0]?.[0]??0;
+  const nSupp   =rows('SELECT COUNT(*) FROM SCSupplements')[0]?.[0]??0;
+  const avgCyc  =nDreams>0?(nCycles/nDreams).toFixed(1):'—';
+
+  const grid=document.createElement('div');
+  grid.className='stats-grid';
+  [[nDreams,t('stats.dreams')],[nCycles,t('stats.cycles')],[avgCyc,t('stats.cyclesPerDream')],
+   [nActs,t('stats.activities')],[nSigns,t('stats.dreamSigns')],[nBookm,t('stats.bookmarks')],[nSupp,t('stats.supplements')]
+  ].forEach(([v,l])=>{grid.innerHTML+=`<div class="stat-card"><div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`;});
+  sv.appendChild(grid);
+
+  const two=document.createElement('div'); two.className='stats-two-col';
+  const catData=rows(`SELECT cat.DisplayName,COUNT(*) n FROM DCDreamCategories dc JOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID GROUP BY cat.CategoryID ORDER BY n DESC LIMIT 15`);
+  two.appendChild(makeBarChart(t('stats.topCategories'),catData,'var(--accent)'));
+  const locData=rows(`SELECT l.Location,COUNT(*) n FROM Dreams d JOIN Location l ON d.Location=l.LocationId GROUP BY l.LocationId ORDER BY n DESC LIMIT 15`);
+  two.appendChild(makeBarChart(t('stats.locations'),locData,'#4ade80'));
+  sv.appendChild(two);
+
+  const two2=document.createElement('div'); two2.className='stats-two-col';
+  const signData=rows(`SELECT DreamSignName,COUNT(*) n FROM DreamSign GROUP BY DreamSignName ORDER BY n DESC LIMIT 15`);
+  two2.appendChild(makeBarChart(t('stats.dreamSigns'),signData,'#f87171'));
+  const techData=rows(`SELECT t.DisplayName,COUNT(*) n FROM DCTechniques dt JOIN Techniques t ON dt.TechniquesID=t.TechniquesID GROUP BY t.TechniquesID ORDER BY n DESC LIMIT 15`);
+  two2.appendChild(makeBarChart(t('stats.techniques'),techData,'#a599ff'));
+  sv.appendChild(two2);
+
+  const two3=document.createElement('div'); two3.className='stats-two-col';
+  const actData=rows(`SELECT at.Activity,COUNT(*) n FROM DailyActivities da JOIN ActivityType at ON da.ActivityTypeID=at.ActivityTypeID GROUP BY at.ActivityTypeID ORDER BY n DESC LIMIT 15`);
+  two3.appendChild(makeBarChart(t('stats.actTypes'),actData,'#fbbf24'));
+  const suppData=rows(`SELECT s.SupplementDescription,COUNT(*) n FROM SCSupplements ss JOIN Supplements s ON ss.SupplementID=s.SupplementID GROUP BY s.SupplementID ORDER BY n DESC LIMIT 15`);
+  two3.appendChild(makeBarChart(t('stats.supplements'),suppData,'#81c2ff'));
+  sv.appendChild(two3);
+
+  sv.appendChild(makeTimeline());
+}
+
+function makeBarChart(title,data,color){
+  const sec=document.createElement('div'); sec.className='stats-section';
+  if(!data.length){sec.innerHTML=`<h3>${title}</h3><div style="color:var(--muted);font-size:13px">${t('msg.noData')}</div>`;return sec;}
+  const max=data[0][1];
+  sec.innerHTML=`<h3>${title}</h3>`+data.map(([label,n])=>`
+    <div class="bar-row">
+      <span class="bar-label" title="${esc(label)}">${esc(label)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:max(4px,${Math.round(n/max*100)}%);background:${color}"></div></div>
+      <span class="bar-count">${n}</span>
+    </div>`).join('');
+  return sec;
+}
+
+function makeTimeline(){
+  const sec=document.createElement('div'); sec.className='stats-section';
+  sec.innerHTML=`<h3>${t('stats.dreamsByMonth')}</h3>`;
+  const data=rows(`SELECT substr(Date_,-4) y, CAST(substr(Date_,instr(Date_,'.')+1,instr(substr(Date_,instr(Date_,'.')+1),'.')-1) AS INTEGER) m, COUNT(*) n FROM Dreams WHERE Date_ IS NOT NULL AND Date_!='' GROUP BY y,m ORDER BY y,m`);
+  if(!data.length){sec.innerHTML+=`<div style="color:var(--muted);font-size:13px">${t('msg.noData')}</div>`;return sec;}
+  const map={};
+  data.forEach(([y,m,n])=>{if(!map[y])map[y]={};map[y][m]=n;});
+  const allYears=Object.keys(map).sort();
+  const months=['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
+  const CELL=14,LABEL_W=40;
+  function cellColor(n){if(!n)return'var(--bg3)';if(n<=2)return'rgba(124,106,247,.3)';if(n<=5)return'rgba(124,106,247,.6)';return'rgba(124,106,247,.95)';}
+  const yearTotals={};
+  allYears.forEach(y=>{yearTotals[y]=Object.values(map[y]).reduce((a,b)=>a+b,0);});
+  const maxYT=Math.max(...Object.values(yearTotals));
+  let html=`<div style="overflow-x:auto"><table style="border-collapse:separate;border-spacing:3px">`;
+  html+=`<tr><td style="width:${LABEL_W}px"></td>`;
+  allYears.forEach(y=>{html+=`<td style="width:${CELL}px;text-align:center;padding-bottom:2px;white-space:nowrap"><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${y}</span></td>`;});
+  html+='</tr>';
+  months.forEach((mName,mi)=>{
+    const mNum=mi+1;
+    html+=`<tr><td style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;padding-right:6px;white-space:nowrap;vertical-align:middle">${mName}</td>`;
+    allYears.forEach(y=>{
+      const n=(map[y]&&map[y][mNum])||0;
+      const tip=`${mName} ${y}: ${n} san${n===1?'':n===2||n===3||n===4?'je':'i'}`;
+      html+=`<td style="padding:0;text-align:center"><div style="width:${CELL}px;height:${CELL}px;border-radius:2px;background:${cellColor(n)};cursor:default;margin:0 auto" title="${tip}"></div></td>`;
+    });
+    html+='</tr>';
+  });
+  html+=`<tr><td style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;padding-right:6px;padding-top:6px;white-space:nowrap">${t('misc.total')}</td>`;
+  allYears.forEach(y=>{
+    const n=yearTotals[y]||0;
+    const pct=maxYT>0?Math.round(n/maxYT*100):0;
+    html+=`<td style="padding:0;padding-top:6px;vertical-align:bottom;text-align:center"><div style="width:${CELL}px;display:flex;flex-direction:column;align-items:center;gap:2px;margin:0 auto" title="${y}: ${n} ${t('stats.dreamsTotal')}"><span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${n}</span><div style="width:${CELL}px;height:32px;background:var(--bg3);border-radius:2px;display:flex;align-items:flex-end"><div style="width:100%;height:${Math.max(2,Math.round(pct*0.32))}px;background:rgba(124,106,247,.5);border-radius:2px"></div></div></div></td>`;
+  });
+  html+=`</tr></table></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--muted)">
+    <span>${t('stats.less')}</span>
+    <div style="width:12px;height:12px;border-radius:2px;background:var(--bg3);border:1px solid var(--border)"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,106,247,.3)"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,106,247,.6)"></div>
+    <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,106,247,.95)"></div>
+    <span>${t('stats.more')}</span>
+  </div>`;
+  sec.innerHTML+=html;
+  return sec;
+}
+
+/* ============================================================
+   TABLE BROWSER
+   ============================================================ */
+function tbOpen(name){
+  currentTable=name; tbPage=1; tbSortCol=null; tbSortDir=1;
+  document.querySelectorAll('.table-item').forEach(el=>el.classList.toggle('active',el.dataset.t===name));
+  tbLoad();
+}
+function tbLoad(){
+  if(!db||!currentTable) return;
+  const res=db.exec(`SELECT * FROM "${currentTable}"`);
+  const pinfo=db.exec(`PRAGMA table_info("${currentTable}")`);
+  tbCols=res[0]?.columns??[];
+  tbInfo=pinfo[0]?.values.map(r=>({name:r[1],type:r[2],pk:r[5]}))??[];
+  tbAllRows=res[0]?.values??[];
+  const cf=document.getElementById('tb-col');
+  cf.innerHTML=`<option value="">${t('tb.allColumns')}</option>`;
+  tbCols.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cf.appendChild(o);});
+  document.getElementById('tb-head').innerHTML='<tr>'+tbCols.map((c,i)=>{
+    const isPK=tbInfo.find(t=>t.name===c)?.pk>0;
+    return`<th onclick="tbSort(${i})">${isPK?'🔑 ':''}${esc(c)}<span class="si">↕</span></th>`;
+  }).join('')+`<th>${t('tb.actions')}</th></tr>`;
+  document.getElementById('tb-search').value='';
+  tbApply();
+}
+function tbApply(){
+  const q=document.getElementById('tb-search').value.toLowerCase().trim();
+  const cf=document.getElementById('tb-col').value;
+  tbRpp=parseInt(document.getElementById('tb-rpp').value);
+  const ci=cf?tbCols.indexOf(cf):-1;
+  tbFiltered=tbAllRows.filter(r=>{
+    if(!q) return true;
+    return(ci>=0?[r[ci]]:r).some(v=>v!==null&&String(v).toLowerCase().includes(q));
+  });
+  if(tbSortCol!==null){
+    tbFiltered.sort((a,b)=>{
+      const av=a[tbSortCol],bv=b[tbSortCol];
+      if(av===null&&bv===null)return 0;
+      if(av===null)return tbSortDir;if(bv===null)return-tbSortDir;
+      return(av<bv?-1:av>bv?1:0)*tbSortDir;
+    });
+  }
+  document.getElementById('tb-count').textContent=t('count.rows', tbFiltered.length);
+  tbPage=1; tbRender();
+}
+function tbSort(ci){
+  if(tbSortCol===ci)tbSortDir*=-1;else{tbSortCol=ci;tbSortDir=1;}
+  document.querySelectorAll('#tb-head th').forEach((th,i)=>{
+    th.classList.toggle('sorted',i===ci);
+    const s=th.querySelector('.si');if(s)s.textContent=i===ci?(tbSortDir>0?'↑':'↓'):'↕';
+  });
+  tbApply();
+}
+function tbRender(){
+  const tw=document.querySelector('.table-wrap');if(tw)tw.scrollTop=0;
+  const start=(tbPage-1)*tbRpp;
+  const page=tbFiltered.slice(start,start+tbRpp);
+  const pkIdxs=tbInfo.filter(c=>c.pk>0).map(c=>tbCols.indexOf(c.name));
+  const tbody=document.getElementById('tb-body');
+  tbody.innerHTML='';
+  page.forEach((row,ri)=>{
+    const tr=document.createElement('tr');
+    row.forEach((val,ci)=>{
+      const td=document.createElement('td');
+      const isBool=(tbInfo.find(t=>t.name===tbCols[ci])?.type||'').toLowerCase().includes('bool');
+      if(val===null){td.textContent='NULL';td.className='null';}
+      else if(isBool&&(val===1||val===true)){td.textContent='true';td.className='bt';}
+      else if(isBool&&(val===0||val===false)){td.textContent='false';td.className='bf';}
+      else{td.textContent=String(val);if(pkIdxs.includes(ci))td.className='pk';}
+      td.title=val!==null?String(val):'NULL';
+      tr.appendChild(td);
+    });
+    const at=document.createElement('td');at.className='act-col';
+    at.innerHTML=`<button class="abt" onclick="tbEdit(${start+ri})">${t('btn.edit')}</button> <button class="abt del" onclick="tbDelete(${start+ri})">${t('btn.delete')}</button>`;
+    tr.appendChild(at);
+    tbody.appendChild(tr);
+  });
+  genericPagination('tb-pagination',tbFiltered,tbPage,tbRpp,p=>{tbPage=p;tbRender();});
+}
+function tbEdit(ri){
+  tbIsNew=false;tbEditIdx=ri;
+  document.getElementById('modal-title').textContent=t('modal.edit')+' — '+currentTable;
+  const body=document.getElementById('modal-body');body.innerHTML='';
+  tbCols.forEach((col,ci)=>{
+    const isPK=tbInfo.find(t=>t.name===col)?.pk>0;
+    const val=tbFiltered[ri][ci];
+    const div=document.createElement('div');div.className='fg';
+    const label=document.createElement('label');label.className='fl';label.textContent=col+(isPK?' 🔑':'');
+    div.appendChild(label);
+    if(isPK){
+      const inp=document.createElement('input');
+      inp.className='fi';inp.id='mf_'+ci;inp.disabled=true;inp.style.opacity='.4';
+      inp.value=val!==null?String(val):'';
+      div.appendChild(inp);
+    }else{
+      const ta=document.createElement('textarea');
+      ta.className='fi';ta.id='mf_'+ci;ta.rows=2;
+      ta.value=val!==null?String(val):'';
+      div.appendChild(ta);
+    }
+    body.appendChild(div);
+  });
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>{const f=document.querySelector('#modal-body .fi:not([disabled])');if(f)f.focus();},50);
+}
+function tbAddRow(){
+  tbIsNew=true;tbEditIdx=null;
+  document.getElementById('modal-title').textContent=t('modal.newRow')+' — '+currentTable;
+  const body=document.getElementById('modal-body');body.innerHTML='';
+  tbInfo.forEach((col,ci)=>{
+    const isPK=col.pk>0;
+    const div=document.createElement('div');div.className='fg';
+    const label=document.createElement('label');label.className='fl';label.textContent=col.name+(isPK?' 🔑 (auto)':'');
+    div.appendChild(label);
+    if(isPK){
+      const inp=document.createElement('input');
+      inp.className='fi';inp.id='mf_'+ci;inp.disabled=true;inp.style.opacity='.35';
+      inp.placeholder='auto';
+      div.appendChild(inp);
+    }else{
+      const ta=document.createElement('textarea');
+      ta.className='fi';ta.id='mf_'+ci;ta.rows=2;
+      div.appendChild(ta);
+    }
+    body.appendChild(div);
+  });
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>{const f=document.querySelector('#modal-body .fi:not([disabled])');if(f)f.focus();},50);
+}
+const DREAM_TABLES=new Set(['Dreams','SleepCycle','DCDreamCategories','DCTechniques','SCSupplements','DreamSign','PerceptionBubbles','DailyActivities','Location']);
+function saveRow(){
+  try{
+    if(tbIsNew){
+      const nonPK=tbInfo.filter(c=>c.pk===0);
+      // Use index within nonPK (matching tbAddRow which uses tbInfo index ci)
+      const vals=nonPK.map((c,i)=>{
+        // tbAddRow assigns id='mf_'+ci where ci is index in tbInfo
+        const ciInInfo=tbInfo.indexOf(c);
+        const el=document.getElementById('mf_'+ciInInfo);
+        return el?(el.value.trim()===''?null:el.value.trim()):null;
+      });
+      if(!nonPK.length){toast('Tabela nima polj za vnos','err');return;}
+      const sql=`INSERT INTO "${currentTable}" (${nonPK.map(c=>`"${c.name}"`).join(',')}) VALUES (${nonPK.map(()=>'?').join(',')})`;
+      console.log('INSERT:',sql,vals);
+      safeRun(sql,vals);
+    }else{
+      const pkCols=tbInfo.filter(c=>c.pk>0);
+      const row=tbFiltered[tbEditIdx];
+      const updates=[],vals=[];
+      tbCols.forEach((col,ci)=>{if(tbInfo.find(t=>t.name===col)?.pk>0)return;const el=document.getElementById('mf_'+ci);if(el){updates.push(`"${col}" = ?`);vals.push(el.value.trim()===''?null:el.value.trim());}});
+      pkCols.forEach(pk=>vals.push(row[tbCols.indexOf(pk.name)]));
+      if(!updates.length){toast('Ni polj za posodobitev','err');return;}
+      const sql=`UPDATE "${currentTable}" SET ${updates.join(', ')} WHERE ${pkCols.map(pk=>`"${pk.name}" = ?`).join(' AND ')}`;
+      console.log('UPDATE:',sql,vals);
+      safeRun(sql,vals);
+    }
+    closeModal();tbLoad();
+    if(DREAM_TABLES.has(currentTable)) buildDreamView();
+    toast(tbIsNew?t('toast.rowAdded'):t('toast.saved'),'ok');
+  }catch(e){toast('Napaka: '+e.message,'err');console.error('saveRow:',e);}
+}
+function tbDelete(ri){
+  if(!confirm(t('modal.confirm.delete'))) return;
+  const pkCols=tbInfo.filter(c=>c.pk>0);
+  if(!pkCols.length){toast(t('toast.noPK'),'err');return;}
+  try{
+    const row=tbFiltered[ri];
+    const vals=pkCols.map(pk=>row[tbCols.indexOf(pk.name)]);
+    safeRun(`DELETE FROM "${currentTable}" WHERE ${pkCols.map(pk=>`"${pk.name}" = ?`).join(' AND ')}`,vals);
+    tbLoad();
+    if(DREAM_TABLES.has(currentTable)) buildDreamView();
+    toast(t('toast.rowDeleted'),'ok');
+  }catch(e){toast('Napaka: '+e.message,'err');console.error('tbDelete:',e);}
+}
+function tbExportCSV(){
+  const csv=[tbCols,...tbFiltered].map(r=>r.map(csvCell).join(',')).join('\n');
+  dl(csv,currentTable+'.csv','text/csv');
+  toast(t('count.rows',tbFiltered.length)+' '+t('toast.exported'),'ok');
+}
+function tbExportJSON(){
+  const obj=tbFiltered.map(r=>Object.fromEntries(tbCols.map((c,i)=>[c,r[i]])));
+  dl(JSON.stringify(obj,null,2),currentTable+'.json','application/json');
+  toast(t('count.rows',obj.length)+' '+t('toast.exported'),'ok');
+}
+
+
+/* ============================================================
+   NEW DREAM FORM
+   ============================================================ */
+
+// Lookup data loaded when form opens
+let nfLookup = {};
+// Cycle counter for unique IDs
+let nfCycleCount = 0;
+
+function nfTodayStr(){
+  const d=new Date();
+  const day=d.getDate();
+  const mon=String(d.getMonth()+1).padStart(2,'0');
+  const yr=d.getFullYear();
+  return `${day}.${mon}.${yr}`;
+}
+
+// Act is stored as 'TRUE'/'FALSE' string in this DB
+function nfActFilter(col='Act'){return `(${col}=1 OR ${col}='1' OR UPPER(${col})='TRUE')`;}
+
+function nfLoadLookup(){
+  nfLookup.locations  = rows(`SELECT LocationId,Location FROM Location WHERE ${nfActFilter()} ORDER BY Location`);
+  nfLookup.techniques = rows(`SELECT TechniquesID,DisplayName,FullName FROM Techniques WHERE ${nfActFilter()} ORDER BY DisplayName`);
+  nfLookup.supplements= rows(`SELECT s.SupplementID,s.SupplementDescription,s.SupplementsUnit,st.SupplementType
+                               FROM Supplements s LEFT JOIN SupplementsType st ON s.SupplementTypeID=st.SupplementsTypeID
+                               WHERE ${nfActFilter('s.Act')} ORDER BY st.SupplementType,s.SupplementDescription`);
+  nfLookup.categories = rows(`SELECT CategoryID,DisplayName FROM DreamCategories WHERE ${nfActFilter()} ORDER BY DisplayName`);
+  nfLookup.signs      = [...new Set(rows('SELECT DreamSignName FROM DreamSign ORDER BY DreamSignName').map(r=>r[0]))];
+  nfLookup.perceptions= [...new Set(rows('SELECT PerceptionBubbleName FROM PerceptionBubbles ORDER BY PerceptionBubbleName').map(r=>r[0]))];
+  nfLookup.suppTypes  = rows(`SELECT SupplementsTypeID,SupplementType FROM SupplementsType WHERE ${nfActFilter()} ORDER BY SupplementType`);
+}
+
+function nfBuild(){
+  nfLoadLookup();
+  nfCycleCount=0;
+  const wrap=document.getElementById('nf-wrap');
+  wrap.innerHTML='';
+
+  // ---- Dream header section ----
+  const hdr=document.createElement('div');
+  hdr.className='nf-section';
+  hdr.innerHTML=`
+    <div class="nf-section-head"><span class="nf-section-title">🌙 ${t('nf.sectionDreams')}</span></div>
+    <div class="nf-row">
+      <div class="nf-field">
+        <label class="nf-label">${t('nf.date')}</label>
+        <input class="nf-input" id="nf-date" value="${nfTodayStr()}" placeholder="D.MM.YYYY">
+      </div>
+      <div class="nf-field" style="flex:2">
+        <label class="nf-label">${t('nf.title')}</label>
+        <input class="nf-input" id="nf-title" placeholder="${t('nf.titlePh')}">
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.location')}</label>
+        <div id="nf-loc-list" style="margin-bottom:6px"></div>
+        <div id="nf-loc-combo"></div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newLocation')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-loc-new" placeholder="${t('nf.locationName')}">
+            <button class="nf-new-btn" onclick="nfAddNewLoc()">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  wrap.appendChild(hdr);
+  nfBuildCombo(document.getElementById('nf-loc-combo'),
+    nfLookup.locations.map(r=>({label:r[1],value:r[0]})),
+    it=>{
+      const list=document.getElementById('nf-loc-list');
+      list.innerHTML='';
+      nfMakePillById(list,it.value,it.label);
+      // Close after single pick — location is unique
+      const combo=document.querySelector('#nf-loc-combo .nf-combo');
+      if(combo){combo.classList.remove('open');combo.querySelector('.nf-combo-input').blur();}
+    },
+    t('nf.searchLocation'));
+
+  // ---- Cycles section ----
+  const cycSec=document.createElement('div');
+  cycSec.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${t('nf.sleepCycles')}</span>
+    <button class="btn" onclick="nfAddCycle()" style="font-size:12px;padding:5px 11px">${t('nf.addCycleBtn')}</button>
+  </div>
+  <div id="nf-cycles"></div>`;
+  wrap.appendChild(cycSec);
+
+  // Add first cycle
+  nfAddCycle();
+  document.getElementById('nf-status').textContent='';
+}
+
+function nfAddCycle(){
+  nfCycleCount++;
+  const ci=nfCycleCount;
+  const container=document.getElementById('nf-cycles');
+  const div=document.createElement('div');
+  div.className='nf-cycle';
+  div.id=`nf-cycle-${ci}`;
+
+  div.innerHTML=`
+    <div class="nf-cycle-head">
+      <span class="nf-cycle-num">${t('nf.cycle')} #${ci}</span>
+      ${ci>1?`<button class="nf-cycle-remove" onclick="nfRemoveCycle(${ci})" title="${t('nf.removeCycle')}">✕</button>`:''}
+    </div>
+    <div class="nf-row">
+      <div class="nf-field">
+        <label class="nf-label">${t('nf.time')}</label>
+        <input class="nf-input" id="nf-c${ci}-time" placeholder="npr. 03:30">
+      </div>
+      <div class="nf-field" style="justify-content:flex-end">
+        <div class="nf-checkbox-wrap" style="margin-top:18px">
+          <input type="checkbox" id="nf-c${ci}-bm">
+          <label for="nf-c${ci}-bm">${t('misc.bookmark')}</label>
+        </div>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.contents')}</label>
+        <textarea class="nf-textarea" id="nf-c${ci}-contents" placeholder="${t('nf.contentsPh')}" style="min-height:120px"></textarea>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.comments')}</label>
+        <textarea class="nf-textarea" id="nf-c${ci}-comments" placeholder="${t('nf.commentsPh')}"></textarea>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.categories')}</label>
+        <div id="nf-c${ci}-cats-list" style="margin-bottom:6px"></div>
+        <div id="nf-c${ci}-cat-combo"></div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newCategory')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-c${ci}-cat-new-name" placeholder="Ime kategorije...">
+            <input class="nf-new-input" id="nf-c${ci}-cat-new-desc" placeholder="${t('nf.descOpt')}">
+            <button class="nf-new-btn" onclick="nfAddNewCat(${ci})">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.techniques')}</label>
+        <div id="nf-c${ci}-techs-list" style="margin-bottom:6px"></div>
+        <div id="nf-c${ci}-tech-combo"></div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newTechnique')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-c${ci}-tech-new-display" placeholder="${t('nf.shortName')}">
+            <input class="nf-new-input" id="nf-c${ci}-tech-new-full" placeholder="${t('nf.fullNameOpt')}">
+            <button class="nf-new-btn" onclick="nfAddNewTech(${ci})">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.cycleActs')}</label>
+        <input class="nf-input" id="nf-c${ci}-activities" placeholder="${t('nf.cycleActsPh')}">
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.dreamSigns')}</label>
+        <div id="nf-c${ci}-signs-list"></div>
+        <div id="nf-c${ci}-sign-combo" style="margin-top:4px"></div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newDreamSign')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-c${ci}-sign-name" placeholder="${t('nf.namePh')}">
+            <input class="nf-new-input" id="nf-c${ci}-sign-desc" placeholder="${t('nf.descOpt')}">
+            <button class="nf-new-btn" onclick="nfAddNewSign(${ci})">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.supplements')}</label>
+        <div id="nf-c${ci}-supps"></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-top:4px">
+          <div id="nf-c${ci}-supp-combo" style="flex:1"></div>
+          <input class="nf-new-input" id="nf-c${ci}-supp-dose" placeholder="${t('nf.dose')}" style="width:100px;flex:none;margin-top:0">
+        </div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newSupplement')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-c${ci}-supp-new-name" placeholder="${t('nf.namePh')}">
+            <input class="nf-new-input" id="nf-c${ci}-supp-new-unit" placeholder="${t('nf.unit')}">
+            <select class="nf-input" id="nf-c${ci}-supp-new-type" style="flex:none;width:130px;padding:5px 8px;font-size:12px">
+              <option value="">— ${t('nf.suppType')} —</option>
+              ${nfLookup.suppTypes.map(r=>`<option value="${r[0]}">${esc(r[1])}</option>`).join('')}
+            </select>
+            <button class="nf-new-btn" onclick="nfAddNewSupp(${ci})">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nf-row">
+      <div class="nf-field full">
+        <label class="nf-label">${t('nf.perceptions')}</label>
+        <div id="nf-c${ci}-percs-list"></div>
+        <div id="nf-c${ci}-perc-combo" style="margin-top:4px"></div>
+        <div class="nf-add-section">
+          <div class="nf-add-label">${t('nf.newPerception')}</div>
+          <div class="nf-new-wrap">
+            <input class="nf-new-input" id="nf-c${ci}-perc-name" placeholder="${t('nf.namePh')}">
+            <input class="nf-new-input" id="nf-c${ci}-perc-desc" placeholder="${t('nf.descOpt')}">
+            <button class="nf-new-btn" onclick="nfAddNewPerc(${ci})">+ ${t('nf.create')}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+
+  // Wire comboboxes for this cycle
+  const catComboEl=document.getElementById(`nf-c${ci}-cat-combo`);
+  const catCombo=nfBuildCombo(catComboEl,
+    nfLookup.categories.map(r=>({label:r[1],value:r[0]})),
+    it=>nfMakePillById(document.getElementById(`nf-c${ci}-cats-list`),it.value,it.label),
+    t('nf.searchCat'));
+  catComboEl._nfComboRefresh=catCombo.refreshItems;
+
+  const techComboEl=document.getElementById(`nf-c${ci}-tech-combo`);
+  const techCombo=nfBuildCombo(techComboEl,
+    nfLookup.techniques.map(r=>({label:r[1],value:r[0],extra:r[2]||''})),
+    it=>nfMakePillById(document.getElementById(`nf-c${ci}-techs-list`),it.value,it.label),
+    t('nf.searchTech'));
+  techComboEl._nfComboRefresh=techCombo.refreshItems;
+
+  nfBuildCombo(document.getElementById(`nf-c${ci}-sign-combo`),
+    nfLookup.signs.map(s=>({label:s,value:s})),
+    it=>nfMakePill(document.getElementById(`nf-c${ci}-signs-list`),it.value,''),
+    t('nf.searchSign'));
+
+  nfBuildCombo(document.getElementById(`nf-c${ci}-perc-combo`),
+    nfLookup.perceptions.map(s=>({label:s,value:s})),
+    it=>nfMakePill(document.getElementById(`nf-c${ci}-percs-list`),it.value,''),
+    t('nf.searchPerc'));
+
+  // Supp combobox — pick triggers dose focus; store refresher for nfAddNewSupp
+  const suppComboEl=document.getElementById(`nf-c${ci}-supp-combo`);
+  const suppCombo=nfBuildCombo(suppComboEl,
+    nfLookup.supplements.map(r=>({label:(r[3]?r[3]+' / ':'')+r[1], value:r[0], suppId:r[0]})),
+    it=>{
+      const list=document.getElementById(`nf-c${ci}-supps`);
+      if(list.querySelector(`[data-suppid="${it.value}"]`)){toast('Suplement je že dodan','err');return;}
+      const dose=document.getElementById(`nf-c${ci}-supp-dose`).value.trim()||null;
+      const row=document.createElement('div');
+      row.className='nf-supp-row'; row.dataset.suppid=it.value;
+      row.innerHTML=`<span class="nf-supp-name">${esc(it.label)}</span>
+        <input class="nf-supp-dose" placeholder="${t('nf.dose')}" value="${esc(dose||'')}">
+        <button class="nf-supp-remove" onclick="this.parentElement.remove()" title="${t('nf.remove')}">✕</button>`;
+      list.appendChild(row);
+      document.getElementById(`nf-c${ci}-supp-dose`).value='';
+      document.getElementById(`nf-c${ci}-supp-dose`).focus();
+    },
+    t('nf.searchSupp'));
+  suppComboEl._nfComboRefresh=suppCombo.refreshItems;
+}
+
+function nfRemoveCycle(ci){
+  const el=document.getElementById(`nf-cycle-${ci}`);
+  if(el) el.remove();
+}
+
+
+// ---- Combobox factory ----
+// Creates a searchable dropdown inside `container` el.
+// items: [{label, value, extra?}]  value = id for cats/techs/loc, name for signs/percs/supps
+// onSelect(item): called when user picks an item (Enter or dblclick on option)
+function nfBuildCombo(container, items, onSelect, placeholder){
+  container.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.className='nf-combo';
+
+  const inp=document.createElement('input');
+  inp.className='nf-combo-input';
+  inp.placeholder=placeholder||'Išči...';
+  inp.autocomplete='off';
+
+  const drop=document.createElement('div');
+  drop.className='nf-combo-drop';
+
+  function buildOpts(q){
+    drop.innerHTML='';
+    const lq=(q||'').toLowerCase();
+    const filtered=items.filter(it=>!lq||it.label.toLowerCase().includes(lq));
+    if(!filtered.length){
+      drop.innerHTML=`<div class="nf-combo-empty">${t('msg.noResults')}</div>`;
+      return;
+    }
+    filtered.forEach(it=>{
+      const div=document.createElement('div');
+      div.className='nf-combo-opt';
+      div.textContent=it.label;
+      div.title=it.extra||'';
+      div.addEventListener('mousedown',e=>{e.preventDefault();pick(it);});
+      div.addEventListener('dblclick',e=>{e.preventDefault();pick(it);});
+      drop.appendChild(div);
+    });
+  }
+
+  function pick(it){
+    onSelect(it);
+    inp.value='';
+    buildOpts('');
+    // Stay open so user can add more items; Escape closes
+    inp.focus();
+  }
+
+  inp.addEventListener('focus',()=>{buildOpts(inp.value);wrap.classList.add('open');});
+  inp.addEventListener('blur',()=>setTimeout(()=>wrap.classList.remove('open'),150));
+  inp.addEventListener('input',()=>buildOpts(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){wrap.classList.remove('open');inp.blur();return;}
+    const opts=[...drop.querySelectorAll('.nf-combo-opt:not(.hidden)')];
+    if(!opts.length) return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault();
+      const focused=drop.querySelector('.nf-combo-opt.focused');
+      let idx=focused?opts.indexOf(focused):-1;
+      if(focused) focused.classList.remove('focused');
+      idx=e.key==='ArrowDown'?(idx+1)%opts.length:(idx-1+opts.length)%opts.length;
+      opts[idx].classList.add('focused');
+      opts[idx].scrollIntoView({block:'nearest'});
+    }
+    if(e.key==='Enter'){
+      e.preventDefault();
+      const focused=drop.querySelector('.nf-combo-opt.focused');
+      if(focused) focused.dispatchEvent(new Event('mousedown'));
+      else if(opts.length===1) opts[0].dispatchEvent(new Event('mousedown'));
+    }
+  });
+
+  buildOpts('');
+  wrap.appendChild(inp);
+  wrap.appendChild(drop);
+  container.appendChild(wrap);
+  return {inp, refreshItems(newItems){items=newItems;buildOpts(inp.value);}};
+}
+
+
+// Make a pill with data-id (for cats/techs)
+function nfMakePillById(container, id, name){
+  if([...container.querySelectorAll('.nf-supp-row')].some(r=>r.dataset.id==id)){
+    toast('Že dodano','err');return;
+  }
+  const row=document.createElement('div');
+  row.className='nf-supp-row';
+  row.dataset.id=id;
+  row.innerHTML=`<span class="nf-supp-name">${esc(name)}</span>
+    <button class="nf-supp-remove" onclick="this.parentElement.remove()" title="${t('nf.remove')}">✕</button>`;
+  container.appendChild(row);
+}
+
+// nfAddCatFromSel, nfAddTechFromSel, nfAddLocFromSel replaced by combobox callbacks
+
+function nfAddNewLoc(){
+  const nameEl=document.getElementById('nf-loc-new');
+  const name=nameEl.value.trim();
+  if(!name){toast('Vnesi ime lokacije','err');return;}
+  safeRun('INSERT INTO Location (Location,Act) VALUES (?,1)',[name]);
+  const locId=rows('SELECT last_insert_rowid()')[0][0];
+  nfLookup.locations=rows(`SELECT LocationId,Location FROM Location WHERE ${nfActFilter()} ORDER BY Location`);
+  // Rebuild location combobox with updated items
+  nfBuildCombo(document.getElementById('nf-loc-combo'),
+    nfLookup.locations.map(r=>({label:r[1],value:r[0]})),
+    it=>{
+      const list=document.getElementById('nf-loc-list');
+      list.innerHTML='';
+      nfMakePillById(list,it.value,it.label);
+      const combo=document.querySelector('#nf-loc-combo .nf-combo');
+      if(combo){combo.classList.remove('open');combo.querySelector('.nf-combo-input').blur();}
+    },
+    t('nf.searchLocation'));
+  const list=document.getElementById('nf-loc-list');
+  list.innerHTML='';
+  nfMakePillById(list,locId,name);
+  nameEl.value='';
+  toast(t('toast.created',name),'ok');
+}
+
+// nfAddSupp replaced by combobox callback
+
+// Shared: make a removable pill for signs/percs lists
+function nfMakePill(container, name, desc){
+  if([...container.querySelectorAll('.nf-supp-row')].some(r=>r.dataset.name===name)){
+    toast('Že dodano','err');return;
+  }
+  const row=document.createElement('div');
+  row.className='nf-supp-row';
+  row.dataset.name=name;
+  row.dataset.desc=desc||'';
+  row.innerHTML=`<span class="nf-supp-name">${esc(name)}</span>
+    <button class="nf-supp-remove" onclick="this.parentElement.remove()" title="${t('nf.remove')}">✕</button>`;
+  container.appendChild(row);
+}
+
+// nfAddSignFromSel replaced by combobox callback
+
+function nfAddNewSign(ci){
+  const nameEl=document.getElementById(`nf-c${ci}-sign-name`);
+  const descEl=document.getElementById(`nf-c${ci}-sign-desc`);
+  const name=nameEl.value.trim();
+  if(!name){toast('Vnesi ime dream signa','err');return;}
+  nfMakePill(document.getElementById(`nf-c${ci}-signs-list`),name,descEl.value.trim());
+  nameEl.value='';descEl.value='';
+}
+
+// nfAddPercFromSel replaced by combobox callback
+
+function nfAddNewPerc(ci){
+  const nameEl=document.getElementById(`nf-c${ci}-perc-name`);
+  const descEl=document.getElementById(`nf-c${ci}-perc-desc`);
+  const name=nameEl.value.trim();
+  if(!name){toast('Vnesi ime perception bubble','err');return;}
+  nfMakePill(document.getElementById(`nf-c${ci}-percs-list`),name,descEl.value.trim());
+  nameEl.value='';descEl.value='';
+}
+
+function nfAddNewCat(ci){
+  const nameEl=document.getElementById(`nf-c${ci}-cat-new-name`);
+  const descEl=document.getElementById(`nf-c${ci}-cat-new-desc`);
+  const name=nameEl.value.trim();
+  if(!name){toast('Vnesi ime kategorije','err');return;}
+  safeRun('INSERT INTO DreamCategories (DisplayName,Description,Act) VALUES (?,?,1)',[name,descEl.value.trim()||null]);
+  const catId=rows('SELECT last_insert_rowid()')[0][0];
+  nfLookup.categories=rows(`SELECT CategoryID,DisplayName FROM DreamCategories WHERE ${nfActFilter()} ORDER BY DisplayName`);
+  // Refresh all cat combos on page
+  const catItems=nfLookup.categories.map(r=>({label:r[1],value:r[0]}));
+  document.querySelectorAll('[id$="-cat-combo"]').forEach(el=>{
+    if(el._nfComboRefresh) el._nfComboRefresh(catItems);
+  });
+  nfMakePillById(document.getElementById(`nf-c${ci}-cats-list`),catId,name);
+  nameEl.value='';descEl.value='';
+  toast(t('toast.created',name),'ok');
+}
+
+function nfAddNewTech(ci){
+  const displayEl=document.getElementById(`nf-c${ci}-tech-new-display`);
+  const fullEl=document.getElementById(`nf-c${ci}-tech-new-full`);
+  const display=displayEl.value.trim();
+  if(!display){toast('Vnesi kratko ime tehnike','err');return;}
+  safeRun('INSERT INTO Techniques (DisplayName,FullName,Act) VALUES (?,?,1)',[display,fullEl.value.trim()||null]);
+  const techId=rows('SELECT last_insert_rowid()')[0][0];
+  nfLookup.techniques=rows(`SELECT TechniquesID,DisplayName,FullName FROM Techniques WHERE ${nfActFilter()} ORDER BY DisplayName`);
+  const techItems=nfLookup.techniques.map(r=>({label:r[1],value:r[0],extra:r[2]||''}));
+  document.querySelectorAll('[id$="-tech-combo"]').forEach(el=>{
+    if(el._nfComboRefresh) el._nfComboRefresh(techItems);
+  });
+  nfMakePillById(document.getElementById(`nf-c${ci}-techs-list`),techId,display);
+  displayEl.value='';fullEl.value='';
+  toast(t('toast.created',display),'ok');
+}
+
+function nfAddNewSupp(ci){
+  const nameEl=document.getElementById(`nf-c${ci}-supp-new-name`);
+  const unitEl=document.getElementById(`nf-c${ci}-supp-new-unit`);
+  const typeEl=document.getElementById(`nf-c${ci}-supp-new-type`);
+  const name=nameEl.value.trim();
+  if(!name){toast('Vnesi ime suplementa','err');return;}
+  safeRun('INSERT INTO Supplements (SupplementDescription,SupplementsUnit,SupplementTypeID,Act) VALUES (?,?,?,1)',
+    [name, unitEl.value.trim()||null, typeEl.value||null]);
+  const suppId=rows('SELECT last_insert_rowid()')[0][0];
+  nfLookup.supplements=rows(`SELECT s.SupplementID,s.SupplementDescription,s.SupplementsUnit,st.SupplementType
+    FROM Supplements s LEFT JOIN SupplementsType st ON s.SupplementTypeID=st.SupplementsTypeID
+    WHERE ${nfActFilter('s.Act')} ORDER BY st.SupplementType,s.SupplementDescription`);
+  const suppItems=nfLookup.supplements.map(r=>({label:(r[3]?r[3]+' / ':'')+r[1],value:r[0],suppId:r[0]}));
+  document.querySelectorAll('[id$="-supp-combo"]').forEach(el=>{
+    if(el._nfComboRefresh) el._nfComboRefresh(suppItems);
+  });
+  // Auto-add to this cycle's list (doza se vnese v dose input)
+  const suppsList=document.getElementById(`nf-c${ci}-supps`);
+  const row=document.createElement('div');
+  row.className='nf-supp-row';
+  row.dataset.suppid=suppId;
+  row.innerHTML=`<span class="nf-supp-name">${esc(name)}</span>
+    <input class="nf-supp-dose" placeholder="${t('nf.dose')}">
+    <button class="nf-supp-remove" onclick="this.parentElement.remove()" title="${t('nf.remove')}">✕</button>`;
+  suppsList.appendChild(row);
+  row.querySelector('.nf-supp-dose').focus();
+  nameEl.value='';unitEl.value='';typeEl.value='';
+  toast(t('toast.created',name),'ok');
+}
+
+function nfReset(){
+  nfBuild();
+}
+
+function nfSave(){
+  const date=document.getElementById('nf-date').value.trim();
+  if(date){
+    const existing=rows(`SELECT DreamID,DreamTitle FROM Dreams WHERE Date_='${date.replace(/'/g,"''")}' LIMIT 3`);
+    if(existing.length){
+      const titles=existing.map(r=>r[1]||'#'+r[0]).join(', ');
+      showConfirm(t('nf.dupTitle'),`Za ta datum ${date} že obstaja ${existing.length} san${existing.length===1?'':'i'}: ${titles}. Nadaljuješ?`, ()=>nfSaveExec());
+      return;
+    }
+  }
+  nfSaveExec();
+}
+function nfSaveExec(){
+  try{
+    const date=document.getElementById('nf-date').value.trim();
+    const title=document.getElementById('nf-title').value.trim();
+    if(!title){toast('Naslov je obvezen','err');return;}
+
+    // ---- Location (from pill list) ----
+    let locId=null;
+    const locPill=document.querySelector('#nf-loc-list .nf-supp-row');
+    if(locPill) locId=parseInt(locPill.dataset.id);
+
+    // ---- Insert Dream ----
+    db.run('INSERT INTO Dreams (Date_,DreamTitle,Location) VALUES (?,?,?)',[date||null,title,locId]);
+    markUnsaved();
+    const dreamId=rows('SELECT last_insert_rowid()')[0][0];
+    if(!dreamId){toast('Napaka: DreamID ni bil ustvarjen','err');return;}
+
+    // ---- Collect active cycles ----
+    const cycleEls=document.querySelectorAll('#nf-cycles .nf-cycle');
+    if(!cycleEls.length){toast('Dodaj vsaj en sleep cikel','err');return;}
+
+    cycleEls.forEach(cyc=>{
+      const ci=cyc.id.replace('nf-cycle-','');
+
+      const time    =document.getElementById(`nf-c${ci}-time`)?.value.trim()||null;
+      const contents=document.getElementById(`nf-c${ci}-contents`)?.value.trim()||null;
+      const comments=document.getElementById(`nf-c${ci}-comments`)?.value.trim()||null;
+      const bm      =document.getElementById(`nf-c${ci}-bm`)?.checked?1:0;
+      const acts    =document.getElementById(`nf-c${ci}-activities`)?.value.trim()||null;
+
+      // Insert SleepCycle
+      db.run('INSERT INTO SleepCycle (DreamID,Time_,Contents,Comments,Bookmark,Activities) VALUES (?,?,?,?,?,?)',
+        [dreamId,time,contents,comments,bm,acts]);
+      const scId=rows('SELECT last_insert_rowid()')[0][0];
+
+      // Categories
+      document.querySelectorAll(`#nf-c${ci}-cats-list .nf-supp-row`).forEach(row=>{
+        safeRun('INSERT INTO DCDreamCategories (CategoryID,SleepCycleID) VALUES (?,?)',[parseInt(row.dataset.id),scId]);
+      });
+
+      // Techniques
+      document.querySelectorAll(`#nf-c${ci}-techs-list .nf-supp-row`).forEach(row=>{
+        safeRun('INSERT INTO DCTechniques (SleepCycleID,TechniquesID) VALUES (?,?)',[scId,parseInt(row.dataset.id)]);
+      });
+
+      // Supplements
+      document.querySelectorAll(`#nf-c${ci}-supps .nf-supp-row`).forEach(row=>{
+        const suppId=parseInt(row.dataset.suppid);
+        const dose=row.querySelector('.nf-supp-dose').value.trim()||null;
+        safeRun('INSERT INTO SCSupplements (SleepCycleID,SupplementID,Dosage) VALUES (?,?,?)',[scId,suppId,dose]);
+      });
+
+      // Dream Signs
+      document.querySelectorAll(`#nf-c${ci}-signs-list .nf-supp-row`).forEach(row=>{
+        safeRun('INSERT INTO DreamSign (SleepCycleID,DreamSignName,DreamSignDescription) VALUES (?,?,?)',
+          [scId,row.dataset.name,row.dataset.desc||null]);
+      });
+
+      // Perception Bubbles
+      document.querySelectorAll(`#nf-c${ci}-percs-list .nf-supp-row`).forEach(row=>{
+        safeRun('INSERT INTO PerceptionBubbles (SleepCycleID,PerceptionBubbleName,PerceptionBubbleDescription) VALUES (?,?,?)',
+          [scId,row.dataset.name,row.dataset.desc||null]);
+      });
+    });
+
+    // ---- Refresh Dream View and jump ----
+    buildDreamView();
+    switchTab('dreams');
+    setTimeout(()=>{
+      const idx=dvFiltered.findIndex(d=>d.id==dreamId);
+      if(idx!==-1){
+        dvPage=Math.ceil((idx+1)/DV_PER_PAGE);
+        renderDreamPage();
+        setTimeout(()=>{
+          const cards=document.querySelectorAll('#dream-view .card');
+          const ci=idx-(dvPage-1)*DV_PER_PAGE;
+          if(cards[ci]){cards[ci].classList.add('open');cards[ci].scrollIntoView({behavior:'smooth',block:'start'});}
+        },50);
+      }
+    },50);
+    toast(t('toast.dreamSaved')+' #'+dreamId,'ok');
+
+  }catch(e){
+    toast('Napaka: '+e.message,'err');
+    console.error('nfSave:',e);
+  }
+}
+
+/* ============================================================
+   SHARED HELPERS
+   ============================================================ */
+
+/* ============================================================
+   GLOBALNO ISKANJE
+   ============================================================ */
+let globalSearchTimeout=null;
+
+function globalSearch(q){
+  const res=document.getElementById('global-results');
+  const gclear=document.getElementById('global-clear');
+  if(gclear) gclear.classList.toggle('visible', q.trim().length>0);
+  q=q.trim();
+  if(q.length<2){res.classList.remove('open');return;}
+  clearTimeout(globalSearchTimeout);
+  globalSearchTimeout=setTimeout(()=>{
+    if(!db){res.classList.remove('open');return;}
+    const pct="%"+q.replace(/'/g,"''")+"%";
+    const sections=[];
+
+    // Naslovi sanj
+    const dreams=rows(`SELECT DreamID,Date_,DreamTitle FROM Dreams WHERE DreamTitle LIKE '${pct}' ORDER BY DreamID DESC LIMIT 50`);
+    if(dreams.length) sections.push({label:t('gs.dreams'),items:dreams.map(r=>({title:r[2]||t('card.noTitle'),sub:r[1]||'',badge:'#'+r[0],action:()=>{closeGlobalSearch();jumpToDream(r[0]);}}))});
+
+    // Vsebina sleep ciklov
+    const cycles=rows(`SELECT sc.SleepCycleID,sc.Contents,sc.DreamID,d.Date_ FROM SleepCycle sc LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE sc.Contents LIKE '${pct}' ORDER BY sc.DreamID DESC LIMIT 50`);
+    if(cycles.length) sections.push({label:t('gs.cycles'),items:cycles.map(r=>({title:truncate(r[1],80),sub:r[3]||'',badge:'SC#'+r[0],action:()=>{closeGlobalSearch();jumpToDream(r[2]);}}))});
+
+    // Komentarji sleep ciklov
+    const comments=rows(`SELECT sc.SleepCycleID,sc.Comments,sc.DreamID,d.Date_ FROM SleepCycle sc LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE sc.Comments LIKE '${pct}' ORDER BY sc.DreamID DESC LIMIT 50`);
+    if(comments.length) sections.push({label:t('gs.comments'),items:comments.map(r=>({title:truncate(r[1],80),sub:r[3]||'',badge:'SC#'+r[0],action:()=>{closeGlobalSearch();jumpToDream(r[2]);}}))});
+
+    // Dream Signs
+    const signs=rows(`SELECT ds.DreamSignName,ds.DreamSignDescription,d.Date_,sc.DreamID FROM DreamSign ds LEFT JOIN SleepCycle sc ON ds.SleepCycleID=sc.SleepCycleID LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE ds.DreamSignName LIKE '${pct}' OR ds.DreamSignDescription LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(signs.length) sections.push({label:t('gs.dreamSigns'),items:signs.map(r=>({title:r[0]||'',sub:truncate(r[1],60)||r[2]||'',badge:'#'+r[3],action:()=>{closeGlobalSearch();jumpToDream(r[3]);}}))});
+
+    // Perception Bubbles
+    const percs=rows(`SELECT pb.PerceptionBubbleName,pb.PerceptionBubbleDescription,d.Date_,sc.DreamID FROM PerceptionBubbles pb LEFT JOIN SleepCycle sc ON pb.SleepCycleID=sc.SleepCycleID LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE pb.PerceptionBubbleName LIKE '${pct}' OR pb.PerceptionBubbleDescription LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(percs.length) sections.push({label:t('gs.perceptions'),items:percs.map(r=>({title:r[0]||'',sub:truncate(r[1],60)||r[2]||'',badge:'#'+r[3],action:()=>{closeGlobalSearch();jumpToDream(r[3]);}}))});
+
+    // Aktivnosti
+    const acts=rows(`SELECT da.Title,da.Description,d.Date_,d.DreamID FROM DailyActivities da LEFT JOIN Dreams d ON da.DreamID=d.DreamID WHERE da.Title LIKE '${pct}' OR da.Description LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(acts.length) sections.push({label:t('gs.activities'),items:acts.map(r=>({title:r[0]||'',sub:truncate(r[1],60)||r[2]||'',badge:'#'+r[3],action:()=>{closeGlobalSearch();jumpToDream(r[3]);}}))});
+
+    // Suplementi
+    const supps=rows(`SELECT s.SupplementDescription,ss.Dosage,d.Date_,sc.DreamID FROM SCSupplements ss JOIN Supplements s ON ss.SupplementID=s.SupplementID LEFT JOIN SleepCycle sc ON ss.SleepCycleID=sc.SleepCycleID LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE s.SupplementDescription LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(supps.length) sections.push({label:t('gs.supplements'),items:supps.map(r=>({title:r[0]||'',sub:(r[1]?r[1]+' — ':'')+( r[2]||''),badge:'#'+r[3],action:()=>{closeGlobalSearch();jumpToDream(r[3]);}}))});
+
+    // Tehnike
+    const techs=rows(`SELECT t.DisplayName,t.FullName,d.Date_,sc.DreamID FROM DCTechniques dt JOIN Techniques t ON dt.TechniquesID=t.TechniquesID LEFT JOIN SleepCycle sc ON dt.SleepCycleID=sc.SleepCycleID LEFT JOIN Dreams d ON sc.DreamID=d.DreamID WHERE t.DisplayName LIKE '${pct}' OR t.FullName LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(techs.length) sections.push({label:t('gs.techniques'),items:techs.map(r=>({title:r[0]||'',sub:r[1]||r[2]||'',badge:'#'+r[3],action:()=>{closeGlobalSearch();jumpToDream(r[3]);}}))});
+
+    // Lokacije
+    const locs=rows(`SELECT l.Location,d.DreamID,d.Date_,d.DreamTitle FROM Dreams d JOIN Location l ON d.Location=l.LocationId WHERE l.Location LIKE '${pct}' ORDER BY d.DreamID DESC LIMIT 50`);
+    if(locs.length) sections.push({label:t('gs.locations'),items:locs.map(r=>({title:r[3]||t('card.noTitle'),sub:r[0]+' — '+(r[2]||''),badge:'#'+r[1],action:()=>{closeGlobalSearch();jumpToDream(r[1]);}}))});
+
+    const INIT_SHOW=3;
+    if(!sections.length){
+      res.innerHTML=`<div class="gr-empty">${t('msg.noResultsFor')} "${esc(q)}"</div>`;
+    }else{
+      res.innerHTML=sections.map((s,si)=>{
+        const visible=s.items.slice(0,INIT_SHOW);
+        const hidden=s.items.slice(INIT_SHOW);
+        const hiddenHtml=hidden.length?
+          '<div id="gr-more-'+si+'" style="display:none">'+
+          hidden.map((item,ii)=>
+            '<div class="gr-item" id="gri-'+si+'-'+(ii+INIT_SHOW)+'">'+
+            '<div style="flex:1"><div class="gr-item-title">'+highlight(item.title,q)+'</div>'+
+            (item.sub?'<div class="gr-item-sub">'+esc(item.sub)+'</div>':'')+
+            '</div><div class="gr-item-badge">'+esc(item.badge)+'</div></div>'
+          ).join('')+'</div>'+
+          `<div class="gr-show-more" id="gr-toggle-${si}">${t('btn.showAll')} (${s.items.length})</div>`
+          :'';
+        return (si>0?'<div class="gr-divider"></div>':'')+
+          '<div class="gr-section"><div class="gr-header">'+s.label+'</div>'+
+          visible.map((item,ii)=>
+            '<div class="gr-item" id="gri-'+si+'-'+ii+'">'+
+            '<div style="flex:1"><div class="gr-item-title">'+highlight(item.title,q)+'</div>'+
+            (item.sub?'<div class="gr-item-sub">'+esc(item.sub)+'</div>':'')+
+            '</div><div class="gr-item-badge">'+esc(item.badge)+'</div></div>'
+          ).join('')+hiddenHtml+'</div>';
+      }).join('');
+      // Attach click handlers
+      sections.forEach((s,si)=>{
+        s.items.forEach((item,ii)=>{
+          const el=document.getElementById('gri-'+si+'-'+ii);
+          if(el) el.addEventListener('click',item.action);
+        });
+        // Show more toggle
+        const toggle=document.getElementById('gr-toggle-'+si);
+        const more=document.getElementById('gr-more-'+si);
+        if(toggle&&more){
+          toggle.addEventListener('click',()=>{
+            const expanded=more.style.display!=='none';
+            more.style.display=expanded?'none':'block';
+            toggle.textContent=expanded?t('btn.showAll')+' ('+s.items.length+')':t('btn.hide');
+          });
+        }
+      });
+    }
+    res.classList.add('open');
+  },200);
+}
+function closeGlobalSearch(){
+  document.getElementById('global-search').value='';
+  document.getElementById('global-results').classList.remove('open');
+  document.getElementById('global-clear').classList.remove('visible');
+}
+
+function truncate(s,n){if(!s)return'';s=String(s);return s.length>n?s.slice(0,n)+'…':s;}
+
+
+
+/* ============================================================
+   CUSTOM SQL TAB
+   ============================================================ */
+let sqlLastResult = null; // {columns, values} za CSV izvoz
+
+function sqlRun(){
+  const input = document.getElementById('sql-input');
+  const errEl = document.getElementById('sql-error');
+  const resultEl = document.getElementById('sql-result');
+  const countEl = document.getElementById('sql-count');
+  const exportBtn = document.getElementById('sql-export-btn');
+  const sql = input.value.trim();
+  if(!sql){ return; }
+
+  errEl.style.display='none';
+  resultEl.innerHTML='';
+  exportBtn.style.display='none';
+  countEl.textContent='';
+  sqlLastResult=null;
+
+  try{
+    const isSelect = /^\s*SELECT\b/i.test(sql);
+    if(isSelect){
+      const res = safeExec(sql);
+      if(!res.length || !res[0].values.length){
+        resultEl.innerHTML=`<div class="empty-view" style="padding:30px">${t('msg.noResults')}</div>`;
+        countEl.textContent=t('count.rows',0);
+        return;
+      }
+      const {columns, values} = res[0];
+      sqlLastResult = {columns, values};
+      countEl.textContent=t('count.rows', values.length);
+      exportBtn.style.display='';
+
+      // Render tabela
+      const table = document.createElement('table');
+      table.innerHTML='<thead><tr>'+columns.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr></thead>';
+      const tbody = document.createElement('tbody');
+      values.forEach(row=>{
+        const tr = document.createElement('tr');
+        row.forEach(val=>{
+          const td = document.createElement('td');
+          if(val===null){td.textContent='NULL';td.className='null';}
+          else{td.textContent=String(val);}
+          td.title=val!==null?String(val):'NULL';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      resultEl.appendChild(table);
+    } else {
+      // INSERT/UPDATE/DELETE/CREATE itd.
+      safeRun(sql, []);
+      resultEl.innerHTML=`<div class="empty-view" style="padding:30px;color:var(--green)">${t('msg.executed')}</div>`;
+      countEl.textContent='';
+      // Refresh dream view če je relevantno
+      buildDreamView();
+    }
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display='block';
+  }
+}
+
+function sqlClear(){
+  document.getElementById('sql-input').value='';
+  document.getElementById('sql-error').style.display='none';
+  document.getElementById('sql-result').innerHTML='';
+  document.getElementById('sql-count').textContent='';
+  document.getElementById('sql-export-btn').style.display='none';
+  sqlLastResult=null;
+  document.getElementById('sql-input').focus();
+}
+
+function sqlExportCSV(){
+  if(!sqlLastResult) return;
+  const {columns, values} = sqlLastResult;
+  const csv=[columns,...values].map(r=>r.map(csvCell).join(',')).join('\n');
+  dl(csv,'sql_export.csv','text/csv');
+  toast(t('count.rows',values.length)+' '+t('toast.exported'),'ok');
+}
+
+function sqlShowHelp(){
+  const helpEl=document.getElementById('sql-help');
+  if(helpEl.style.display!=='none'){helpEl.style.display='none';return;}
+  document.getElementById('sql-help-content').innerHTML=sqlHelpHtml();
+  renderSavedSQL();
+  helpEl.style.display='block';
+}
+
+function sqlHelpHtml(){
+  const h=(t,c)=>`<div style="margin-bottom:24px">
+    <div style="font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">${t}</div>
+    ${c}
+  </div>`;
+  const q=(sql,desc)=>`<div style="margin-bottom:10px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${desc}</div>
+    <code onclick="sqlUse(this)" style="display:block;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12px;color:var(--accent2);cursor:pointer;white-space:pre-wrap;line-height:1.6" title="Klikni za uporabo">${esc(sql)}</code>
+  </div>`;
+
+  const TABLES=['Dreams','SleepCycle','DailyActivities','ActivityType','DCDreamCategories',
+    'DreamCategories','DCTechniques','Techniques','DreamSign','PerceptionBubbles',
+    'Location','SCSupplements','Supplements','SupplementsType'];
+
+  const SQL = {
+    sanje20: "SELECT DreamID, Date_, DreamTitle, Location\nFROM Dreams ORDER BY DreamID DESC LIMIT 20",
+    sanjePoLetih: "SELECT substr(Date_,-4) AS leto, COUNT(*) AS stevilo\nFROM Dreams WHERE Date_ IS NOT NULL\nGROUP BY leto ORDER BY leto",
+    sanjePoMesecih: "SELECT substr(Date_,-4) AS leto,\n  CAST(substr(Date_,instr(Date_,'.')+1,\n  instr(substr(Date_,instr(Date_,'.')+1),'.')-1) AS INT) AS mesec,\n  COUNT(*) AS stevilo\nFROM Dreams WHERE Date_ IS NOT NULL\nGROUP BY leto, mesec ORDER BY leto, mesec",
+    iskanjeNaslov: "SELECT DreamTitle, Date_ FROM Dreams\nWHERE DreamTitle LIKE '%letenje%'\nORDER BY DreamID DESC",
+    sanjeLokacija: "SELECT d.DreamID, d.Date_, d.DreamTitle, l.Location\nFROM Dreams d JOIN Location l ON d.Location=l.LocationId\nORDER BY d.DreamID DESC LIMIT 20",
+    zaznamki: "SELECT sc.SleepCycleID, sc.Time_, d.Date_, d.DreamTitle\nFROM SleepCycle sc JOIN Dreams d ON sc.DreamID=d.DreamID\nWHERE sc.Bookmark=1 ORDER BY d.DreamID DESC",
+    iskanjeVsebina: "SELECT sc.SleepCycleID, sc.Contents, d.Date_\nFROM SleepCycle sc JOIN Dreams d ON sc.DreamID=d.DreamID\nWHERE sc.Contents LIKE '%vzorec%'\nORDER BY d.DreamID DESC",
+    najvecCiklov: "SELECT d.DreamID, d.Date_, COUNT(sc.SleepCycleID) AS cikli\nFROM Dreams d LEFT JOIN SleepCycle sc ON d.DreamID=sc.DreamID\nGROUP BY d.DreamID ORDER BY cikli DESC LIMIT 20",
+    topKategorije: "SELECT cat.DisplayName, COUNT(*) AS stevilo\nFROM DCDreamCategories dc\nJOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nGROUP BY cat.CategoryID ORDER BY stevilo DESC",
+    topTehnike: "SELECT t.DisplayName, COUNT(*) AS stevilo\nFROM DCTechniques dt JOIN Techniques t ON dt.TechniquesID=t.TechniquesID\nGROUP BY t.TechniquesID ORDER BY stevilo DESC",
+    lucidne: "SELECT d.Date_, d.DreamTitle, cat.DisplayName\nFROM DCDreamCategories dc\nJOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nJOIN SleepCycle sc ON dc.SleepCycleID=sc.SleepCycleID\nJOIN Dreams d ON sc.DreamID=d.DreamID\nWHERE cat.DisplayName='LS'\nORDER BY d.DreamID DESC LIMIT 20",
+    topSupl: "SELECT s.SupplementDescription, st.SupplementType, COUNT(*) AS stevilo\nFROM SCSupplements ss\nJOIN Supplements s ON ss.SupplementID=s.SupplementID\nLEFT JOIN SupplementsType st ON s.SupplementTypeID=st.SupplementsTypeID\nGROUP BY s.SupplementID ORDER BY stevilo DESC",
+    suplPoImenu: "SELECT d.Date_, d.DreamTitle, s.SupplementDescription, ss.Dosage\nFROM SCSupplements ss\nJOIN Supplements s ON ss.SupplementID=s.SupplementID\nJOIN SleepCycle sc ON ss.SleepCycleID=sc.SleepCycleID\nJOIN Dreams d ON sc.DreamID=d.DreamID\nWHERE s.SupplementDescription LIKE '%melatonin%'\nORDER BY d.DreamID DESC",
+    topSigns: "SELECT DreamSignName, COUNT(*) AS stevilo\nFROM DreamSign GROUP BY DreamSignName ORDER BY stevilo DESC LIMIT 20",
+    topPercs: "SELECT PerceptionBubbleName, COUNT(*) AS stevilo\nFROM PerceptionBubbles GROUP BY PerceptionBubbleName ORDER BY stevilo DESC LIMIT 20",
+    lucidnePoLetih: "SELECT substr(Date_,-4) AS leto,\n  SUM(CASE WHEN cat.DisplayName='LS' THEN 1 ELSE 0 END) AS lucidne,\n  COUNT(DISTINCT d.DreamID) AS skupaj\nFROM Dreams d\nLEFT JOIN SleepCycle sc ON d.DreamID=sc.DreamID\nLEFT JOIN DCDreamCategories dc ON sc.SleepCycleID=dc.SleepCycleID\nLEFT JOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nGROUP BY leto ORDER BY leto",
+    vsebKategorije: "SELECT d.DreamID, d.Date_, d.DreamTitle,\n  GROUP_CONCAT(DISTINCT cat.DisplayName) AS kategorije\nFROM Dreams d\nJOIN SleepCycle sc ON d.DreamID=sc.DreamID\nJOIN DCDreamCategories dc ON sc.SleepCycleID=dc.SleepCycleID\nJOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nGROUP BY d.DreamID ORDER BY d.DreamID DESC LIMIT 20",
+    suplLucidne: "SELECT d.Date_, d.DreamTitle,\n  s.SupplementDescription, ss.Dosage,\n  cat.DisplayName AS kategorija\nFROM Dreams d\nJOIN SleepCycle sc ON d.DreamID=sc.DreamID\nLEFT JOIN SCSupplements ss ON sc.SleepCycleID=ss.SleepCycleID\nLEFT JOIN Supplements s ON ss.SupplementID=s.SupplementID\nLEFT JOIN DCDreamCategories dc ON sc.SleepCycleID=dc.SleepCycleID\nLEFT JOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nWHERE cat.DisplayName='LS'\nORDER BY d.DreamID DESC",
+    korelacija: "SELECT t.DisplayName AS tehnika,\n  COUNT(DISTINCT d.DreamID) AS skupaj_sanj,\n  SUM(CASE WHEN cat.DisplayName='LS' THEN 1 ELSE 0 END) AS lucidne,\n  ROUND(100.0*SUM(CASE WHEN cat.DisplayName='LS' THEN 1 ELSE 0 END)\n    /COUNT(DISTINCT d.DreamID),1) AS pct_lucidnih\nFROM DCTechniques dt\nJOIN Techniques t ON dt.TechniquesID=t.TechniquesID\nJOIN SleepCycle sc ON dt.SleepCycleID=sc.SleepCycleID\nJOIN Dreams d ON sc.DreamID=d.DreamID\nLEFT JOIN DCDreamCategories dc ON sc.SleepCycleID=dc.SleepCycleID\nLEFT JOIN DreamCategories cat ON dc.CategoryID=cat.CategoryID\nGROUP BY t.TechniquesID HAVING skupaj_sanj>5\nORDER BY pct_lucidnih DESC",
+  };
+
+  return h(t('sql.h.tables'),
+    `<div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${TABLES.map(t=>`<span onclick="sqlUse(this)" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--accent2);cursor:pointer" title="Klikni za SELECT">${t}</span>`).join('')}
+    </div>`
+  )+
+  h(t('sql.h.dreamOverview'),
+    q(SQL.sanje20,t('sql.q.last20'))+
+    q(SQL.sanjePoLetih,t('sql.q.byYear'))+
+    q(SQL.sanjePoMesecih,t('sql.q.byMonth'))+
+    q(SQL.iskanjeNaslov,t('sql.q.searchTitle'))+
+    q(SQL.sanjeLokacija,t('sql.q.withLocation'))
+  )+
+  h(t('sql.h.sleepCycles'),
+    q(SQL.zaznamki,t('sql.q.bookmarked'))+
+    q(SQL.iskanjeVsebina,t('sql.q.searchContent'))+
+    q(SQL.najvecCiklov,t('sql.q.mostCycles'))
+  )+
+  h(t('sql.h.catsTechs'),
+    q(SQL.topKategorije,t('sql.q.topCats'))+
+    q(SQL.topTehnike,t('sql.q.topTechs'))+
+    q(SQL.lucidne,t('sql.q.lucid'))
+  )+
+  h(t('sql.h.supplements'),
+    q(SQL.topSupl,t('sql.q.topSupps'))+
+    q(SQL.suplPoImenu,t('sql.q.suppByName'))
+  )+
+  h(t('sql.h.signsPercs'),
+    q(SQL.topSigns,t('sql.q.topSigns'))+
+    q(SQL.topPercs,t('sql.q.topPercs'))
+  )+
+  h(t('sql.h.advanced'),
+    q(SQL.lucidnePoLetih,t('sql.q.lucidByYear'))+
+    q(SQL.vsebKategorije,t('sql.q.allCats'))+
+    q(SQL.suplLucidne,t('sql.q.suppLucid'))+
+    q(SQL.korelacija,t('sql.q.correlation'))
+  )+
+  `<div style="margin-top:8px;padding:12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--muted)">
+    ${t('sql.hint')}
+  </div>`;
+}
+function sqlUse(el){
+  const sql=el.textContent.trim();
+  document.getElementById('sql-input').value=sql;
+  document.getElementById('sql-help').style.display='none';
+  document.getElementById('sql-input').focus();
+}
+
+
+/* ============================================================
+   DB TAB — Tabele + SQL subpanel
+   ============================================================ */
+let dbMode = 'tables';
+
+function dbInit(){
+  loadTables();
+  dbSetMode(dbMode);
+}
+
+function dbSetMode(mode){
+  dbMode = mode;
+  // Toggle gumba
+  document.getElementById('dbmode-tables').classList.toggle('active', mode==='tables');
+  document.getElementById('dbmode-sql').classList.toggle('active', mode==='sql');
+  // Toolbari
+  document.getElementById('db-tb-toolbar').style.display = mode==='tables'?'flex':'none';
+  document.getElementById('db-sql-toolbar').style.display = mode==='sql'?'flex':'none';
+  // Pogledi
+  document.getElementById('db-tables-view').style.display = mode==='tables'?'flex':'none';
+  document.getElementById('db-sql-view').style.display = mode==='sql'?'flex':'none';
+  if(mode==='sql') setTimeout(()=>document.getElementById('sql-input').focus(),50);
+}
+
+/* ---- Shranjene poizvedbe (localStorage) ---- */
+function sqlGetSaved(){
+  try{ return JSON.parse(localStorage.getItem('somnia-saved-sql')||'[]'); }
+  catch{ return []; }
+}
+function sqlSetSaved(arr){ localStorage.setItem('somnia-saved-sql', JSON.stringify(arr)); }
+
+function sqlSave(){
+  const sql = document.getElementById('sql-input').value.trim();
+  if(!sql){ toast(t('sql.noQuery'),'err'); return; }
+  const name = prompt('Ime poizvedbe:', sql.slice(0,40).replace(/\n/g,' ')+'...');
+  if(!name) return;
+  const saved = sqlGetSaved();
+  saved.unshift({ name, sql, ts: Date.now() });
+  sqlSetSaved(saved);
+  renderSavedSQL();
+  toast(t('sql.querySaved'),'ok');
+}
+
+function sqlDeleteSaved(idx){
+  const saved = sqlGetSaved();
+  saved.splice(idx,1);
+  sqlSetSaved(saved);
+  renderSavedSQL();
+}
+
+function renderSavedSQL(){
+  const list = document.getElementById('sql-saved-list');
+  if(!list) return;
+  const allSaved = sqlGetSaved();
+  const searchWrap = document.getElementById('sql-saved-search')?.closest('.search-wrap');
+  if(searchWrap) searchWrap.style.display = allSaved.length ? '' : 'none';
+  const q = (document.getElementById('sql-saved-search')?.value||'').toLowerCase().trim();
+  const saved = allSaved.filter(s=>!q||s.name.toLowerCase().includes(q)||s.sql.toLowerCase().includes(q));
+  if(!saved.length){
+    list.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--muted);font-style:italic">'+(q?t('sql.noMatches'):t('sql.noSaved'))+'</div>';
+    return;
+  }
+  list.innerHTML='';
+  saved.forEach((s)=>{
+    const realIdx = allSaved.findIndex(x=>x.ts===s.ts);
+    const div = document.createElement('div');
+    div.className='sql-saved-item';
+    div.innerHTML=`<span class="sql-saved-name" title="${esc(s.name)}">${esc(s.name)}</span>
+      <span class="sql-saved-preview">${esc(s.sql.replace(/\n/g,' '))}</span>
+      <button class="sql-saved-del" onclick="event.stopPropagation();sqlDeleteSaved(${realIdx})" title="Izbriši">×</button>`;
+    div.addEventListener('click',()=>{
+      document.getElementById('sql-input').value=s.sql;
+      document.getElementById('sql-input').focus();
+    });
+    list.appendChild(div);
+  });
+}
+
+
+/* ============================================================
+   i18n — Faza 1: infrastruktura + Dreams tab
+   ============================================================ */
+function getLang(lang){
+  if(lang==='en') return window.LANG_EN||window.LANG_SL||{};
+  return window.LANG_SL||{};
+}
+
+
+
+function setLang(lang){
+  currentLang=lang;
+  localStorage.setItem('somnia-lang',lang);
+  buildLangToggle();
+  applyLang();
+}
+
+function buildLangToggle(){
+  const wrap=document.getElementById('lang-toggle');
+  if(!wrap) return;
+  const langs=Object.keys(window).filter(k=>k.startsWith('LANG_')).map(k=>k.replace('LANG_','').toLowerCase());
+  // Zagotovi vsaj sl+en
+  const known=['sl','en'];
+  const all=[...new Set([...known,...langs])].filter(l=>window['LANG_'+l.toUpperCase()]);
+  wrap.innerHTML=all.map((l,i)=>
+    `<button class="lang-btn${l===currentLang?' active':''}"
+      onclick="setLang('${l}')"
+      style="${i>0?'border-left:none':''}">${l.toUpperCase()}</button>`
+  ).join('');
+  // Dinamično popravi border-radius
+  const btns=wrap.querySelectorAll('.lang-btn');
+  btns.forEach((b,i)=>{
+    b.style.borderRadius=btns.length===1?'var(--radius)':
+      i===0?'var(--radius) 0 0 var(--radius)':
+      i===btns.length-1?'0 var(--radius) var(--radius) 0':'0';
+    if(i>0) b.style.borderLeft='none';
+  });
+}
+
+function applyLang() {
+  // Tabi
+  ['activities','perceptions','dreamsigns','techniques','supplements','stats','db','newdream'].forEach(ns => {
+    const el = document.getElementById('tab-'+ns);
+    if (!el) return;
+    const cnt = el.querySelector('.tab-count');
+    const cntHtml = cnt ? cnt.outerHTML : '';
+    el.innerHTML = t('tab.'+ns) + cntHtml;
+  });
+  const dtab = document.getElementById('tab-dreams');
+  if (dtab) {
+    const cnt = dtab.querySelector('.tab-count');
+    dtab.innerHTML = t('dreams.tabLabel') + (cnt ? cnt.outerHTML : '');
+  }
+  // Header gumbi
+  setText('lbl-openDb',        t('header.openDb'));
+  setText('lbl-saveDb',        t('header.saveDb'));
+  // DB submode
+  setText('lbl-dbmode-tables', '📋 '+t('db.tables'));
+  setText('lbl-dbmode-sql',    '🔍 '+t('db.sql'));
+  // SQL toolbar
+  setText('lbl-sql-run',       t('btn.run'));
+  setText('lbl-sql-clear',     t('btn.clear'));
+  setText('lbl-sql-help-title',t('sql.helpTitle'));
+  setText('lbl-sql-help',      '📖 '+t('btn.help'));
+  setText('lbl-sql-close',     '× '+t('btn.close'));
+  setText('lbl-saved-title',   t('sql.savedTitle'));
+  setText('lbl-tb-add',        '+ '+t('btn.newRow'));
+  // Sidebar
+  setText('lbl-sidebar-tables',t('db.tables'));
+  setText('lbl-tab-stats',   '📊 '+t('tab.stats_label'));
+  setText('lbl-tab-db',      '🗄 '+t('tab.db_label'));
+  setText('lbl-tab-newdream','✏️ '+t('tab.newdream_label'));
+  setText('lbl-nf-save',     '💾 '+t('nf.saveDream'));
+  setText('lbl-sql-save',    '💾 '+t('btn.save'));
+  // Dreams toolbar
+  setText('lbl-dv-expand',     t('btn.expandAll'));
+  setText('lbl-dv-collapse',   t('btn.collapseAll'));
+  // Modal
+  setText('lbl-modal-cancel',  t('btn.cancel'));
+  setText('lbl-modal-save',    t('btn.save'));
+  // Generic expand/collapse (tvRender jih generira dinamično)
+  document.querySelectorAll('.lbl-expand').forEach(el=>el.textContent=t('btn.expandAll'));
+  document.querySelectorAll('.lbl-collapse').forEach(el=>el.textContent=t('btn.collapseAll'));
+  document.querySelectorAll('.lbl-edit').forEach(el=>el.textContent=t('btn.edit'));
+  document.querySelectorAll('.lbl-delete').forEach(el=>el.textContent=t('btn.delete'));
+  // Placeholderji
+  setPlaceholder('dv-search',       t('ph.searchDreams'));
+  setPlaceholder('global-search',   t('ph.searchGlobal'));
+  setPlaceholder('tb-search',       t('ph.search'));
+  setPlaceholder('sql-input',       t('ph.sqlEditor'));
+  setPlaceholder('sql-saved-search',t('ph.searchSaved'));
+  // Sort opcije
+  const dvSort = document.getElementById('dv-sort');
+  if (dvSort) {
+    const keys = ['dreams.sortIdDesc','dreams.sortIdAsc','dreams.sortDateDesc','dreams.sortDateAsc'];
+    [...dvSort.options].forEach((opt,i) => { if(keys[i]) opt.textContent = t(keys[i]); });
+  }
+  // Filter prva opcija
+  const dvLoc = document.getElementById('dv-loc');
+  if (dvLoc && dvLoc.options[0]) dvLoc.options[0].textContent = t('dreams.allLocs');
+  const dvCat = document.getElementById('dv-cat');
+  if (dvCat && dvCat.options[0]) dvCat.options[0].textContent = t('dreams.allCats');
+  // Lang toggle gumb
+  buildLangToggle();
+  // Empty state
+  setText('lbl-noDb', t('misc.noDb'));
+  setText('lbl-noDbDesc', t('misc.noDbDesc'));
+  setText('lbl-shortcuts', t('misc.shortcuts'));
+  // tb-rpp options
+  const _tbRpp = document.getElementById('tb-rpp');
+  if(_tbRpp){
+    const _rppLabels=[`50 / ${t('tb.page')}`,`100 / ${t('tb.page')}`,`250 / ${t('tb.page')}`,t('btn.all')];
+    [..._tbRpp.options].forEach((o,i)=>{if(_rppLabels[i]) o.textContent=_rppLabels[i];});
+  }
+  const _optAllCols = document.getElementById('opt-all-cols');
+  if(_optAllCols) _optAllCols.textContent = t('tb.allColumns');
+  const _btnNfReset = document.getElementById('btn-nf-reset');
+  if(_btnNfReset) _btnNfReset.textContent = t('btn.reset');
+  // Re-render aktivnih pogledov da posodobimo t() v template literalih
+  if(db){
+    if(currentTab==='dreams') renderDreamPage();
+    else if(TV_CONFIG[currentTab]) tvRender(currentTab);
+    if(currentTab==='db') tbRender();
+  }
+}
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function setPlaceholder(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.placeholder = text;
+}
+
+
+/* ---- Lokalni confirm dialog ---- */
+let _confirmCallback = null;
+function showConfirm(title, msg, onOk){
+  _confirmCallback = onOk;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-overlay').classList.add('open');
+  document.getElementById('confirm-ok').focus();
+}
+function confirmResolve(val){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if(val && _confirmCallback) _confirmCallback();
+  _confirmCallback = null;
+}
+
+
+/* ---- PIN ZAŠČITA ---- */
+const _PIN_KEY = 'somnia-pin-hash';
+const _REC_KEY = 'somnia-pin-recovery';
+
+function _simpleHash(s){
+  let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;return h.toString(36);
+}
+
+function pinCheck(){
+  const stored = localStorage.getItem(_PIN_KEY);
+  if(!stored) return; // Ni PINa — normalno odpri
+  // Prikaži PIN ekran
+  const screen = document.createElement('div');
+  screen.className = 'pin-screen';
+  screen.id = 'pin-screen';
+  screen.innerHTML = `
+    <div style="font-size:32px">🌙</div>
+    <h2>Somnia</h2>
+    <p>Vnesi PIN za dostop</p>
+    <div class="pin-input-row" id="pin-row"></div>
+    <div class="pin-err" id="pin-err"></div>
+    <span class="pin-link" onclick="pinForgot()">Pozabil sem PIN</span>
+  `;
+  document.body.prepend(screen);
+  buildPinRow('pin-row', pin => {
+    if(_simpleHash(pin) === stored){
+      screen.remove();
+    } else {
+      document.getElementById('pin-err').textContent = 'Napačen PIN.';
+      clearPinRow('pin-row');
+    }
+  });
+}
+
+function buildPinRow(rowId, onComplete){
+  const row = document.getElementById(rowId);
+  row.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const inp = document.createElement('input');
+    inp.type='password';inp.maxLength=1;inp.className='pin-d';inp.inputMode='numeric';
+    inp.addEventListener('input', e=>{
+      e.target.value=e.target.value.replace(/\D/g,'');
+      if(e.target.value&&i<3) row.children[i+1].focus();
+      const val=[...row.children].map(d=>d.value).join('');
+      if(val.length===4) setTimeout(()=>onComplete(val),80);
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Backspace'&&!e.target.value&&i>0) row.children[i-1].focus();
+    });
+    row.appendChild(inp);
+  }
+  setTimeout(()=>row.children[0]?.focus(),50);
+}
+
+function clearPinRow(rowId){
+  const row=document.getElementById(rowId);
+  [...row.children].forEach(d=>d.value='');
+  row.children[0]?.focus();
+}
+
+function pinForgot(){
+  document.getElementById('pin-forgot-overlay').style.display='flex';
+  document.getElementById('pin-recovery-input').value='';
+  document.getElementById('pin-recovery-error').textContent='';
+  setTimeout(()=>document.getElementById('pin-recovery-input').focus(),50);
+}
+
+function submitPinRecovery(){
+  const code=document.getElementById('pin-recovery-input').value.replace(/-/g,'').trim().toUpperCase();
+  const errEl=document.getElementById('pin-recovery-error');
+  const stored=localStorage.getItem(_REC_KEY);
+  if(!stored){errEl.textContent='Recovery koda ni nastavljena.';return;}
+  if(_simpleHash(code)!==stored){errEl.textContent='Napačna recovery koda.';return;}
+  localStorage.removeItem(_PIN_KEY);
+  localStorage.removeItem(_REC_KEY);
+  document.getElementById('pin-forgot-overlay').style.display='none';
+  document.getElementById('pin-screen')?.remove();
+  updateLockBtn();
+  toast('PIN ponastavljen. Nastavi novega v setup.html','ok');
+}
+
+function lockBrowser(){
+  const stored=localStorage.getItem(_PIN_KEY);
+  if(!stored){toast('PIN ni nastavljen. Nastavi ga v setup.html','err');return;}
+  // Prikaži PIN ekran
+  pinCheck();
+}
+
+function updateLockBtn(){
+  const btn=document.getElementById('lock-btn');
+  if(btn) btn.style.display=localStorage.getItem(_PIN_KEY)?'':'none';
+}
+
+
+/* ============================================================
+   FIRST-RUN WIZARD
+   ============================================================ */
+const WIZ_KEY = 'somnia-wiz-done';
+let wizStep = 0;
+
+const WIZ_STEPS = [
+  { icon:'🌙', titleKey:'wiz.step1.title', descKey:'wiz.step1.desc' },
+  { icon:'📂', titleKey:'wiz.step2.title', descKey:'wiz.step2.desc' },
+  { icon:'🗂', titleKey:'wiz.step3.title', descKey:'wiz.step3.desc' },
+  { icon:'💾', titleKey:'wiz.step4.title', descKey:'wiz.step4.desc' },
+];
+
+function wizCheck(){
+  if(!localStorage.getItem(WIZ_KEY)) wizOpen();
+}
+
+function wizOpen(){
+  wizStep = 0;
+  wizRender();
+  document.getElementById('wiz-overlay').classList.add('open');
+}
+
+function wizRender(){
+  const s = WIZ_STEPS[wizStep];
+  document.getElementById('wiz-icon').textContent = s.icon;
+  document.getElementById('wiz-title').textContent = t(s.titleKey);
+  document.getElementById('wiz-desc').innerHTML = t(s.descKey);
+  // Dots
+  document.getElementById('wiz-dots').innerHTML = WIZ_STEPS.map((_,i)=>
+    `<div class="wiz-dot${i===wizStep?' active':''}"></div>`).join('');
+  // Buttons
+  const back = document.getElementById('wiz-back');
+  const next = document.getElementById('wiz-next');
+  back.style.display = wizStep > 0 ? '' : 'none';
+  const lbl = document.getElementById('lbl-wiz-next');
+  if(lbl) lbl.textContent = wizStep < WIZ_STEPS.length-1 ? t('wiz.next') : t('wiz.finish');
+  document.getElementById('lbl-wiz-back').textContent = t('wiz.back');
+  document.getElementById('lbl-wiz-skip').textContent = t('wiz.skip');
+}
+
+function wizNav(dir){
+  wizStep += dir;
+  if(wizStep >= WIZ_STEPS.length){
+    wizClose();
+  } else if(wizStep < 0){
+    wizStep = 0;
+  } else {
+    wizRender();
+  }
+}
+
+function wizClose(){
+  localStorage.setItem(WIZ_KEY, '1');
+  document.getElementById('wiz-overlay').classList.remove('open');
+}
+
+/* ============================================================
+   HELP OVERLAY
+   ============================================================ */
+function showHelp(){
+  const body = document.getElementById('help-body');
+  body.innerHTML = buildHelpContent();
+  document.getElementById('help-overlay').classList.add('open');
+  // Update labels
+  document.getElementById('lbl-help-title').textContent = '❓ '+t('help.title');
+  document.getElementById('lbl-help-close').textContent = t('btn.close');
+}
+
+function buildHelpContent(){
+  const sec = (title, content) =>
+    `<div class="help-section"><h3>${title}</h3>${content}</div>`;
+
+  const tabRow = (icon, name, desc) =>
+    `<div class="help-tab-row">
+      <div class="help-tab-icon">${icon}</div>
+      <div><div class="help-tab-name">${name}</div>
+      <div class="help-tab-desc">${desc}</div></div>
+    </div>`;
+
+  const shortcut = (keys, desc) =>
+    `<div class="help-shortcut-row">
+      <div class="help-shortcut-keys">${keys.map(k=>`<span class="help-kbd">${k}</span>`).join('')}</div>
+      <div>${desc}</div>
+    </div>`;
+
+  const tabs = sec(t('help.tabs'),
+    tabRow('🌙', t('tab.dreams'),       t('help.tab.dreams'))+
+    tabRow('🛠️', t('tab.techniques'),   t('help.tab.techniques'))+
+    tabRow('🔮', t('tab.dreamsigns'),   t('help.tab.dreamsigns'))+
+    tabRow('💊', t('tab.supplements'),  t('help.tab.supplements'))+
+    tabRow('🫧', t('tab.perceptions'),  t('help.tab.perceptions'))+
+    tabRow('🏃', t('tab.activities'),   t('help.tab.activities'))+
+    tabRow('📊', t('tab.stats'),        t('help.tab.stats'))+
+    tabRow('🗄', t('tab.db'),           t('help.tab.db'))+
+    tabRow('✏️', t('tab.newdream'),     t('help.tab.newdream'))
+  );
+
+  const shortcuts = sec(t('help.shortcuts'),
+    shortcut(['/'],           t('help.sc.search'))+
+    shortcut(['N'],           t('help.sc.newdream'))+
+    shortcut(['←','→'],      t('help.sc.pages'))+
+    shortcut(['Ctrl+Enter'], t('help.sc.sql'))+
+    shortcut(['Escape'],     t('help.sc.close'))
+  );
+
+  const tips = sec(t('help.tips'),
+    `<div style="font-size:13px;color:var(--muted);line-height:1.9">
+      ${t('help.tip1')}<br>
+      ${t('help.tip2')}<br>
+      ${t('help.tip3')}<br>
+      ${t('help.tip4')}
+    </div>`
+  );
+
+  const setup_link = `<div class="help-section">
+    <div style="font-size:13px;color:var(--muted);line-height:1.7">
+      ${t('help.setup')} <a href="setup.html" target="_blank" style="color:var(--accent2)">setup.html</a>
+    </div>
+  </div>`;
+
+  return tabs + shortcuts + tips + setup_link;
+}
+
+
+/* ============================================================
+   FILE SYSTEM ACCESS API + INDEXEDDB HANDLE STORAGE
+   ============================================================ */
+
+// Minimalen IDB wrapper za shranjevanje file handle-a
+const _idb = {
+  _db: null,
+  async open(){
+    if(this._db) return this._db;
+    return new Promise((res,rej)=>{
+      const req = indexedDB.open('djdb',1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+      req.onsuccess = e => { this._db=e.target.result; res(this._db); };
+      req.onerror = e => rej(e);
+    });
+  },
+  async get(key){
+    const db = await this.open();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction('kv','readonly');
+      const req=tx.objectStore('kv').get(key);
+      req.onsuccess=()=>res(req.result);
+      req.onerror=rej;
+    });
+  },
+  async set(key,val){
+    const db = await this.open();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(val,key);
+      tx.oncomplete=res; tx.onerror=rej;
+    });
+  },
+  async del(key){
+    const db = await this.open();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction('kv','readwrite');
+      tx.objectStore('kv').delete(key);
+      tx.oncomplete=res; tx.onerror=rej;
+    });
+  }
+};
+
+const FSA_HANDLE_KEY = 'somnia-file-handle';
+const hasFSA = 'showOpenFilePicker' in window;
+
+// Ob zagonu — preveri ali imamo shranjen handle
+async function fsa_tryAutoOpen(){
+  if(!hasFSA) return false;
+  try{
+    const handle = await _idb.get(FSA_HANDLE_KEY);
+    if(!handle) return false;
+    // Zahtevaj dovoljenje
+    const perm = await handle.requestPermission({mode:'readwrite'});
+    if(perm !== 'granted') return false;
+    // Preberi datoteko
+    const file = await handle.getFile();
+    const buf = await file.arrayBuffer();
+    await _loadBuffer(buf, file.name);
+    // Shrani za auto-save
+    window._fileHandle = handle;
+    return true;
+  }catch(e){
+    console.log('FSA auto-open failed:', e.message);
+    await _idb.del(FSA_HANDLE_KEY);
+    return false;
+  }
+}
+
+async function fsa_open(){
+  if(!hasFSA){
+    // Fallback — klasičen file picker
+    document.getElementById('fi').click();
+    return;
+  }
+  try{
+    const [handle] = await window.showOpenFilePicker({
+      types:[{description:'SQLite', accept:{'application/x-sqlite3':['.sqlite','.db','.sqlite3']}}],
+      multiple:false
+    });
+    await _idb.set(FSA_HANDLE_KEY, handle);
+    const file = await handle.getFile();
+    const buf = await file.arrayBuffer();
+    await _loadBuffer(buf, file.name);
+    window._fileHandle = handle;
+  }catch(e){
+    if(e.name !== 'AbortError') toast('Napaka: '+e.message,'err');
+  }
+}
+
+async function fsa_save(){
+  if(window._fileHandle){
+    try{
+      // Direktno zapiši nazaj v datoteko
+      const writable = await window._fileHandle.createWritable();
+      const data = db.export();
+      await writable.write(new Uint8Array(data));
+      await writable.close();
+      markSaved();
+      toast(t('toast.dbSaved')+': '+window._fileHandle.name,'ok');
+      return;
+    }catch(e){
+      console.log('FSA save failed:', e.message);
+    }
+  }
+  // Fallback — klasičen download
+  exportSQLite();
+}
+
+async function _loadBuffer(buf, name){
+  try{
+    if(db) db.close();
+    db = new SQL.Database(new Uint8Array(buf));
+    loadingNewFile=false; markSaved();
+    document.getElementById('nav-tabs').style.display='flex';
+    document.getElementById('empty-state').style.display='none';
+    buildDreamView(); updateAllTabCounts(); switchTab('dreams'); applyLang();
+    document.title='Somnia — '+name;
+    updateLockBtn();
+    toast(t('toast.dbOpened')+': '+name,'ok');
+    wizCheck();
+  }catch(e){
+    toast('Napaka: '+e.message,'err');
+  }
+}
+
+
+/* ---- Migracija localStorage ključev djdb → somnia ---- */
+(function(){
+  const migrate = [
+    ['djdb-lang','somnia-lang'],['djdb-theme','somnia-theme'],
+    ['djdb-pin-hash','somnia-pin-hash'],['djdb-pin-recovery','somnia-pin-recovery'],
+    ['djdb-wiz-done','somnia-wiz-done'],['djdb-file-handle','somnia-file-handle'],
+    ['somnia-saved-sql','somnia-saved-sql'],
+  ];
+  migrate.forEach(([old,nw])=>{
+    const v=localStorage.getItem(old);
+    if(v!==null&&!localStorage.getItem(nw)){
+      localStorage.setItem(nw,v);
+      localStorage.removeItem(old);
+    }
+  });
+})();
+
+/* ---- TEMA ---- */
+function toggleTheme(){
+  const html=document.documentElement;
+  const isLight=html.getAttribute('data-theme')==='light';
+  html.setAttribute('data-theme', isLight?'dark':'light');
+  localStorage.setItem('somnia-theme', isLight?'dark':'light');
+}
+(function(){
+  const saved=localStorage.getItem('somnia-theme');
+  if(saved) document.documentElement.setAttribute('data-theme',saved);
+  else document.documentElement.setAttribute('data-theme','dark');
+})();
+// Init lang po DOM load
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Registriraj Service Worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(e=>console.log('SW reg failed:',e));
+  }
+  pinCheck();
+  buildLangToggle();
+  applyLang();
+  updateLockBtn();
+  // Poskusi avtomatično odpreti zadnjo bazo (FSA)
+  if(!db) await fsa_tryAutoOpen();
+});
+
+/* ============================================================
+   SKUPNE UI HELPER FUNKCIJE
+   ============================================================ */
+function searchInput(inputId, clearId, filterFn, debounceMs){
+  const val=document.getElementById(inputId).value;
+  document.getElementById(clearId).classList.toggle('visible', val.length>0);
+  if(debounceMs){
+    clearTimeout(window._searchDebounce);
+    window._searchDebounce=setTimeout(filterFn, debounceMs);
+  } else {
+    filterFn();
+  }
+}
+
+function clearSearch(inputId, clearId, filterFn){
+  document.getElementById(inputId).value='';
+  document.getElementById(clearId).classList.remove('visible');
+  filterFn();
+}
+
+function toggleAll(selector, open){
+  document.querySelectorAll(selector+'.open').forEach(c=>{ if(!open) c.classList.remove('open'); });
+  if(open) document.querySelectorAll(selector).forEach(c=>c.classList.add('open'));
+}
+
+function toggleCard(card,selector){
+  const isOpen=card.classList.contains('open');
+  document.querySelectorAll(selector+'.open').forEach(c=>c.classList.remove('open'));
+  if(!isOpen) card.classList.add('open');
+}
+
+function genericPagination(pgId,arr,curPage,rpp,onPage){
+  const total=arr.length,pages=Math.ceil(total/rpp);
+  const pg=document.getElementById(pgId);if(!pg)return;pg.innerHTML='';
+  if(pages<=1){pg.innerHTML=`<span class="pg-info">${t('count.total',total,'records')}</span>`;return;}
+  const prev=document.createElement('button');
+  prev.className='pg-btn';prev.textContent='←';prev.disabled=curPage<=1;
+  prev.onclick=()=>onPage(curPage-1);pg.appendChild(prev);
+  for(let p=Math.max(1,curPage-2);p<=Math.min(pages,curPage+2);p++){
+    const b=document.createElement('button');
+    b.className='pg-btn'+(p===curPage?' active':'');b.textContent=p;
+    b.onclick=(pp=>()=>onPage(pp))(p);pg.appendChild(b);
+  }
+  const next=document.createElement('button');
+  next.className='pg-btn';next.textContent='→';next.disabled=curPage>=pages;
+  next.onclick=()=>onPage(curPage+1);pg.appendChild(next);
+  const info=document.createElement('span');info.className='pg-info';
+  info.textContent=`${(curPage-1)*rpp+1}–${Math.min(curPage*rpp,total)} ${t('misc.of')} ${total}`;
+  pg.appendChild(info);
+}
+
+function highlight(text,q){
+  if(!text)return'';
+  const safe=esc(text);
+  if(!q)return safe;
+  const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return safe.replace(re,'<mark class="highlight">$1</mark>');
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function dl(content,name,type){const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();requestAnimationFrame(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);});}
+function csvCell(v){if(v===null||v===undefined)return'';const s=String(v);return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`  :s;}
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.className='toast',2800);}
+function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ---- Keyboard shortcuts ---- */
+window.addEventListener('beforeunload',e=>{
+  if(unsavedChanges&&!loadingNewFile){e.preventDefault();e.returnValue=t('misc.unsaved');}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();document.getElementById('sql-help').style.display='none';closeGlobalSearch();document.getElementById('help-overlay').classList.remove('open');document.getElementById('wiz-overlay').classList.remove('open');document.activeElement?.blur();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&currentTab==='db'&&document.getElementById('db-sql-view').style.display!=='none'){e.preventDefault();sqlRun();return;}
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='/'){
+    e.preventDefault();
+    const sid=currentTab==='dreams'?'dv-search':TV_CONFIG[currentTab]?.searchId;
+    if(sid){const el=document.getElementById(sid);if(el)el.focus();}
+  }
+  if(e.key==='n'||e.key==='N'){if(db){e.preventDefault();switchTab('newdream');}}
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+    const dir=e.key==='ArrowLeft'?-1:1;
+    const pgMaps={
+      dreams:()=>{const np=dvPage+dir;if(np>=1&&np<=Math.ceil(dvFiltered.length/DV_PER_PAGE)){dvPage=np;renderDreamPage();}},
+    };
+    if(pgMaps[currentTab]){pgMaps[currentTab]();}
+    else if(TV_CONFIG[currentTab]){
+      const st=tvState[currentTab];const cfg=TV_CONFIG[currentTab];
+      const np=st.page+dir;const maxP=Math.ceil(st.groups.length/cfg.RPP);
+      if(np>=1&&np<=maxP){st.page=np;tvRender(currentTab);}
+    }
+  }
+});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.addEventListener('click',e=>{
+  const wrap=document.getElementById('global-search-wrap');
+  if(wrap&&!wrap.contains(e.target)) document.getElementById('global-results').classList.remove('open');
+});
+</script>
+</body>
+</html>
