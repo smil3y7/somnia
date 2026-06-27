@@ -411,7 +411,7 @@
 </header>
 
 <div class="nav-tabs" id="nav-tabs" style="display:none">
-  <div class="nav-tab active" onclick="switchTab('dreams')"      id="tab-dreams">🌙 Sanje<span class="tab-count" id="cnt-dreams"></span></div>
+  <div class="nav-tab active" onclick="switchTab('dreams')"      id="tab-dreams"><span id="lbl-tab-dreams">🌙 Sanje</span><span class="tab-count" id="cnt-dreams"></span></div>
   <div class="nav-tab"        onclick="switchTab('techniques')"  id="tab-techniques">🛠️ Tehnike<span class="tab-count" id="cnt-techniques"></span></div>
   <div class="nav-tab"        onclick="switchTab('dreamsigns')"  id="tab-dreamsigns">🔮 Dream Signs<span class="tab-count" id="cnt-dreamsigns"></span></div>
   <div class="nav-tab"        onclick="switchTab('supplements')" id="tab-supplements">💊 Suplementi<span class="tab-count" id="cnt-supplements"></span></div>
@@ -604,7 +604,7 @@
 
 <div class="help-overlay" id="help-overlay">
   <div class="help-header">
-    <h2 id="lbl-help-title">❓ Pomoč</h2>
+    <h2>❓ <span id="lbl-help-title">Pomoč</span></h2>
     <button class="btn" onclick="document.getElementById('help-overlay').classList.remove('open')">× <span id="lbl-help-close">Zapri</span></button>
   </div>
   <div class="help-body" id="help-body"></div>
@@ -2792,11 +2792,7 @@ function applyLang() {
     const cntHtml = cnt ? cnt.outerHTML : '';
     el.innerHTML = t('tab.'+ns) + cntHtml;
   });
-  const dtab = document.getElementById('tab-dreams');
-  if (dtab) {
-    const cnt = dtab.querySelector('.tab-count');
-    dtab.innerHTML = t('dreams.tabLabel') + (cnt ? cnt.outerHTML : '');
-  }
+  setText('lbl-tab-dreams', t('tab.dreams'));
   // Header gumbi
   setText('lbl-openDb',        t('header.openDb'));
   setText('lbl-saveDb',        t('header.saveDb'));
@@ -2810,7 +2806,7 @@ function applyLang() {
   setText('lbl-sql-help',      '📖 '+t('btn.help'));
   setText('lbl-sql-close',     '× '+t('btn.close'));
   setText('lbl-saved-title',   t('sql.savedTitle'));
-  setText('lbl-tb-add',        '+ '+t('btn.newRow'));
+  setText('lbl-tb-add',        t('btn.newRow'));
   // Sidebar
   setText('lbl-sidebar-tables',t('db.tables'));
   setText('lbl-tab-stats',   '📊 '+t('tab.stats_label'));
@@ -3055,7 +3051,7 @@ function showHelp(){
   body.innerHTML = buildHelpContent();
   document.getElementById('help-overlay').classList.add('open');
   // Update labels
-  document.getElementById('lbl-help-title').textContent = '❓ '+t('help.title');
+  setText('lbl-help-title', t('help.title'));
   document.getElementById('lbl-help-close').textContent = t('btn.close');
 }
 
