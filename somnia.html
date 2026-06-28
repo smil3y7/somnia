@@ -2793,6 +2793,8 @@ function applyLang() {
     el.innerHTML = t('tab.'+ns) + cntHtml;
   });
   setText('lbl-tab-dreams', t('tab.dreams'));
+  setText('lbl-help-title',   t('help.title'));
+  setText('lbl-help-close',   t('btn.close'));
   // Header gumbi
   setText('lbl-openDb',        t('header.openDb'));
   setText('lbl-saveDb',        t('header.saveDb'));
@@ -3269,6 +3271,7 @@ function toggleTheme(){
 })();
 // Init lang po DOM load
 document.addEventListener('DOMContentLoaded', async ()=>{
+  setTimeout(()=>applyLang(), 0); // Zagotovi DOM
   // Registriraj Service Worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(e=>console.log('SW reg failed:',e));
